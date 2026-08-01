@@ -444,6 +444,7 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
+        
     },
     header: {
         flexDirection: "row",

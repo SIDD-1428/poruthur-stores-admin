@@ -9,22 +9,22 @@ import { addDoc, collection, getDocs, serverTimestamp } from "firebase/firestore
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import Animated, {
-    FadeInDown,
-    FadeInUp,
-    ZoomIn,
+  FadeInDown,
+  FadeInUp,
+  ZoomIn,
 } from "react-native-reanimated";
 import { db, storage } from "../firebase/config";
 
@@ -89,7 +89,7 @@ export default function AddProductScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [category, setCategory] = useState("");
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategory, setNewCategory] = useState("");
@@ -104,8 +104,10 @@ export default function AddProductScreen() {
       const snapshot = await getDocs(collection(db, "categories"));
 const data =
   snapshot.docs.map(
-    (doc) =>
-      doc.data().name
+    (doc) =>({
+      id: doc.id,
+      ...doc.data(),
+    })
   );
 
 setCategories(data); 
@@ -186,7 +188,7 @@ console.log(
     }
 
     setIsSaving(true);
-    try {
+    try{
       await addDoc(collection(db, "products"), {
         name,
         price: Number(price),
@@ -200,10 +202,7 @@ console.log(
         createdAt: new Date(),
       });
 
-      setCategories((prev) => [
-  ...prev,
-  newCategory.trim(),
-]);
+      await loadCategories();
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", "Product added successfully", [
@@ -219,59 +218,60 @@ console.log(
   };
 
   const addCategory = async () => {
-    if (!newCategory.trim()) {
-      Alert.alert("Error", "Please enter a category name");
-      return;
-    }
+  if (!newCategory.trim()) {
+    Alert.alert("Error", "Please enter a category name");
+    return;
+  }
 
-    // Check if category already exists
-    if (categories.includes(newCategory.trim())) {
-      Alert.alert("Error", "Category already exists");
-      return;
-    }
-
-    setIsAddingCategory(true);
-    try {
-      const docRef = await addDoc(collection(db, "categories"), {
-        name: newCategory.trim(),
-        createdAt: serverTimestamp(),
-      });
-
-      console.log("Category added with ID:", docRef.id);
-      
-      // Update local state
-if (
-  categories.includes(
-    newCategory.trim()
+  if (
+  categories.some(
+    (cat: any) =>
+      cat.name.trim().toLowerCase() ===
+      newCategory.trim().toLowerCase()
   )
 ) {
-  Alert.alert(
-    "Category Exists"
-  );
+  Alert.alert("Error", "Category already exists");
   return;
-}      setCategory(newCategory.trim());
-      setNewCategory("");
-      setShowNewCategory(false);
-      setDropdownOpen(false);
+}
 
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Success", `Category "${newCategory.trim()}" added successfully`);
-    } catch (error: any) {
-      console.log("Error adding category:", error);
-      
-      // Show specific error message
-      let errorMessage = "Failed to add category";
-      if (error.code === "permission-denied") {
-        errorMessage = "Permission denied. Please check Firestore rules.";
-      } else if (error.code === "unavailable") {
-        errorMessage = "Network error. Please try again.";
-      }
-      
-      Alert.alert("Error", errorMessage);
-    } finally {
-      setIsAddingCategory(false);
-    }
-  };
+  setIsAddingCategory(true);
+
+  try {
+    const snapshot = await getDocs(collection(db, "categories"));
+
+    const maxPosition = Math.max(
+      0,
+      ...snapshot.docs.map((doc) => doc.data().position ?? 0)
+    );
+
+    await addDoc(collection(db, "categories"), {
+      name: newCategory.trim(),
+      subtitle: "",
+      image: "",
+      position: maxPosition + 1,
+      isVisible: true,
+      createdAt: serverTimestamp(),
+    });
+
+    await loadCategories();
+
+    setCategory(newCategory.trim());
+    setNewCategory("");
+    setShowNewCategory(false);
+    setDropdownOpen(false);
+
+    Haptics.notificationAsync(
+      Haptics.NotificationFeedbackType.Success
+    );
+
+    Alert.alert("Success", "Category added successfully");
+  } catch (error) {
+    console.log(error);
+    Alert.alert("Error", "Failed to add category");
+  } finally {
+    setIsAddingCategory(false);
+  }
+};
 
   return (
     <KeyboardAvoidingView
@@ -422,12 +422,12 @@ if (
                   )}
                   
                  {categories.map(
-  (item, index) => (
+  (item:any) => (
     <TouchableOpacity
-      key={`${item}-${index}`}
+      key={item.id}
       style={styles.dropdownItem}
       onPress={() => {
-        setCategory(item);
+        setCategory(item.name);
         setDropdownOpen(false);
       }}
     >
@@ -436,7 +436,7 @@ if (
           styles.dropdownItemText
         }
       >
-        {item}
+        {item.name}
       </Text>
     </TouchableOpacity>
   )

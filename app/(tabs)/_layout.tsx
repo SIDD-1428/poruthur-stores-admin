@@ -1,5 +1,6 @@
 import { Tabs } from "expo-router";
 import React from "react";
+import { Ionicons } from "@expo/vector-icons";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -7,32 +8,23 @@ import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function TabLayout() {
-  const colorScheme =
-    useColorScheme();
+  const colorScheme = useColorScheme();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor:
-          Colors[
-            colorScheme ??
-              "light"
-          ].tint,
-
-        tabBarButton:
-          HapticTab,
+          Colors[colorScheme ?? "light"].tint,
+        tabBarButton: HapticTab,
       }}
     >
+      {/* Dashboard */}
       <Tabs.Screen
         name="dashboard"
         options={{
-          title:
-            "Dashboard",
-
-          tabBarIcon: ({
-            color,
-          }) => (
+          title: "Dashboard",
+          tabBarIcon: ({ color }) => (
             <IconSymbol
               size={28}
               name="house.fill"
@@ -42,18 +34,30 @@ export default function TabLayout() {
         }}
       />
 
+      {/* Orders */}
       <Tabs.Screen
         name="index"
         options={{
-          title:
-            "Orders",
-
-          tabBarIcon: ({
-            color,
-          }) => (
+          title: "Orders",
+          tabBarIcon: ({ color }) => (
             <IconSymbol
               size={28}
               name="shippingbox.fill"
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* Delivery */}
+      <Tabs.Screen
+        name="delivery"
+        options={{
+          title: "Delivery",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="navigate-circle-outline"
+              size={size}
               color={color}
             />
           ),

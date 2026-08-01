@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { collection, doc, onSnapshot, writeBatch,updateDoc } from "firebase/firestore";
+import { collection, doc, onSnapshot, updateDoc, writeBatch } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { db } from "../firebase/config";
@@ -137,7 +137,16 @@ export default function Categories() {
 
             return (
               <View key={category.id} style={styles.categoryCard}>
-                <View style={{ flex: 1 }}>
+                <TouchableOpacity style={{flex:1}}
+                activeOpacity={0.8}
+                onPress={()=>router.push({
+                  pathname:"/category-edit",
+                  params:{
+                    id:category.id,
+                  },
+                })}>
+
+               
                   <Text style={styles.categoryName}>{category.name}</Text>
                   <Text style={styles.categoryCount}>{productCount} Products</Text>
                   <View style={{flexDirection:"row",marginTop:8,alignItems:"center",}}>
@@ -153,7 +162,7 @@ export default function Categories() {
                       </Text>
                     </View>
                 </View>
-                </View>
+                 </TouchableOpacity>
 
                 <View style={{ justifyContent: "space-evenly", alignItems:"center", height: 95,width:34, }}>
                   <TouchableOpacity onPress={()=>toggleVisibility(category)}>

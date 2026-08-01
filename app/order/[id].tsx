@@ -240,6 +240,10 @@ export default function OrderDetails() {
       Alert.alert("Order Cancelled", "This order has been cancelled and cannot be updated.");
       return;
     }
+    if(order.status==="Delivered"){
+      Alert.alert("Order Completed","This order has already been delivered.");
+      return;
+    }
     try {
       await updateDoc(doc(db, "orders", id as string), { status });
       Alert.alert("Updated", `Order marked as ${status}`);
@@ -433,7 +437,7 @@ export default function OrderDetails() {
                 <Text style={styles.itemName}>{item.name}</Text>
                 <Text style={styles.itemQty}>Qty: {item.quantity}</Text>
               </View>
-              <Text style={styles.itemPrice}>₹{item.price * item.quantity}</Text>
+              <Text style={styles.itemPrice}>₹{item.unitPrice * item.quantity}</Text>
             </View>
           ))}
         </InfoCard>
@@ -454,6 +458,18 @@ export default function OrderDetails() {
             <Text style={styles.totalAmount}>₹{order.total}</Text>
           </View>
         </InfoCard>
+
+        <Animated.View entering={FadeInUp.delay(420)}>
+          <TouchableOpacity style={styles.printBtn} onPress={()=> router.push({ pathname:"/printOrder", params:{id:order.id,},})}>
+            <LinearGradient colors={[Colors.primary,Colors.accent]}
+            style={styles.printBtnGradient}>
+              <Ionicons name="print-outline" size={20} color="#FFF"/>
+              <Text style={styles.printBtnText}>
+                  Print Invoice
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
@@ -513,6 +529,9 @@ type MainStyles = {
   supportBtn: ViewStyle;
   supportBtnGrad: ViewStyle;
   supportBtnText: TextStyle;
+  printBtn:ViewStyle;
+  printBtnGradient:ViewStyle,
+  printBtnText:TextStyle,
 };
 
 type StepStyles = {
@@ -536,6 +555,27 @@ const styles = StyleSheet.create<MainStyles>({
     flex: 1, 
     backgroundColor: Colors.background 
   },
+
+  printBtn: {
+  borderRadius: Radius.xl,
+  overflow: "hidden",
+  marginTop: 8,
+  ...Shadow.colored(Colors.primary),
+},
+
+printBtnGradient: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  paddingVertical: 16,
+  gap: 10,
+},
+
+printBtnText: {
+  color: "#FFF",
+  fontSize: 15,
+  fontWeight: "600",
+},
 
   loadingContainer: { 
     flex: 1, 
@@ -940,6 +980,7 @@ const cardStyles = StyleSheet.create<CardStyles>({
     ...Typography.headline,
     color: Colors.textPrimary,
   },
+
   
   cardBody: {},
 });
