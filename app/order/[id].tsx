@@ -286,6 +286,9 @@ export default function OrderDetails() {
     ? Colors.success
     : Colors.primary;
 
+  // Get the date from invoice or createdAt
+  const orderDate = order.invoice?.issuedAt ?? order.createdAt;
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* ── Header ── */}
@@ -384,16 +387,16 @@ export default function OrderDetails() {
           <View style={styles.infoRow}>
             <Text style={styles.infoKey}>Placed on</Text>
             <Text style={styles.infoValue}>
-              {order.createdAt?.toDate
-                ? order.createdAt.toDate().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+              {orderDate?.toDate
+                ? orderDate.toDate().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
                 : "Just now"}
             </Text>
           </View>
           <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
             <Text style={styles.infoKey}>Time</Text>
             <Text style={styles.infoValue}>
-              {order.createdAt?.toDate
-                ? order.createdAt.toDate().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+              {orderDate?.toDate
+                ? orderDate.toDate().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
                 : "–"}
             </Text>
           </View>
@@ -405,9 +408,13 @@ export default function OrderDetails() {
             <Text style={styles.infoKey}>Name</Text>
             <Text style={styles.infoValue}>{order.customerName || "N/A"}</Text>
           </View>
-          <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+          <View style={styles.infoRow}>
             <Text style={styles.infoKey}>Email</Text>
             <Text style={styles.infoValue} numberOfLines={1}>{order.customerEmail || "N/A"}</Text>
+          </View>
+          <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+            <Text style={styles.infoKey}>Phone</Text>
+            <Text style={styles.infoValue}>{order.customerPhone || order.address?.phone || "N/A"}</Text>
           </View>
         </InfoCard>
 
@@ -446,16 +453,20 @@ export default function OrderDetails() {
         <InfoCard icon="wallet-outline" iconColor={Colors.primary} label="Bill Summary" delay={360}>
           <View style={styles.infoRow}>
             <Text style={styles.infoKey}>Subtotal</Text>
-            <Text style={styles.infoValue}>₹{order.total}</Text>
+            <Text style={styles.infoValue}>₹{order.pricing?.subtotal ?? order.total}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoKey}>Delivery</Text>
-            <Text style={[styles.infoValue, { color: Colors.success }]}>FREE</Text>
+            <Text style={[styles.infoValue, { color: (order.pricing?.deliveryCharge ?? 0) === 0 ? Colors.success : Colors.textPrimary }]}>
+              {(order.pricing?.deliveryCharge ?? 0) === 0
+                ? "FREE"
+                : `₹${order.pricing.deliveryCharge}`}
+            </Text>
           </View>
           <View style={styles.divider} />
           <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
             <Text style={[styles.infoKey, { fontSize: 16, fontWeight: "600", color: Colors.textPrimary }]}>Total</Text>
-            <Text style={styles.totalAmount}>₹{order.total}</Text>
+            <Text style={styles.totalAmount}>₹{order.pricing?.grandTotal ?? order.total}</Text>
           </View>
         </InfoCard>
 

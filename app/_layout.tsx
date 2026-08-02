@@ -13,6 +13,11 @@ import {
 } from "firebase/auth";
 
 import {
+  doc,
+  getDoc,
+} from "firebase/firestore";
+
+import {
   StatusBar,
 } from "expo-status-bar";
 
@@ -25,6 +30,7 @@ import "react-native-reanimated";
 
 import {
   auth,
+  db,
 } from "../firebase/config";
 
 import {
@@ -42,17 +48,49 @@ export default function RootLayout() {
     useState(true);
 
   useEffect(() => {
+    const checkAdminAndSetUser = async (currentUser: any) => {
+      if (!currentUser) {
+        // Nobody signed in — go to the login screen.
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const adminDoc = await getDoc(
+          doc(db, "admins", currentUser.uid)
+        );
+
+        const isAdmin =
+          adminDoc.exists() &&
+          adminDoc.data().email === currentUser.email;
+
+        if (isAdmin) {
+          setUser(currentUser);
+        } else {
+          // Signed in, but not an admin — kick them back to login.
+          await auth.signOut();
+          setUser(null);
+        }
+      } catch (error) {
+        // If the admin check itself fails (e.g. no network), fail
+        // closed: treat as not-signed-in rather than crashing or
+        // letting a non-admin through.
+        console.log("Admin check failed:", error);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const unsubscribe =
       onAuthStateChanged(
         auth,
         (currentUser) => {
-          setUser(
-            currentUser
-          );
-
-          setLoading(
-            false
-          );
+          // Handle the async admin check inside its own function so
+          // the outer callback (which Firebase expects to be sync)
+          // never has to return a Promise itself.
+          checkAdminAndSetUser(currentUser);
         }
       );
 
