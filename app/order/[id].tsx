@@ -5,13 +5,16 @@ import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Linking,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TextStyle,
   TouchableOpacity,
   View,
-  ViewStyle
+  ViewStyle,
 } from "react-native";
 import Animated, {
   FadeInDown,
@@ -25,7 +28,6 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { db } from "../../firebase/config";
 
-// ── Clean Black/White/Grey Color Scheme ──
 const Colors = {
   background: "#FFFFFF",
   card: "#FFFFFF",
@@ -43,7 +45,6 @@ const Colors = {
   light: "#E8E8E8",
 };
 
-// ── Typography ─────────────────────────────────────────────────
 const Typography: {
   title2: TextStyle;
   headline: TextStyle;
@@ -78,7 +79,6 @@ const Typography: {
   },
 };
 
-// ── Spacing & Radius ──────────────────────────────────────────
 const Spacing = {
   xs: 4,
   sm: 8,
@@ -96,7 +96,6 @@ const Radius = {
   full: 999,
 };
 
-// ── Shadows ────────────────────────────────────────────────────
 const Shadow = {
   sm: {
     shadowColor: "#000",
@@ -121,7 +120,6 @@ const Shadow = {
   }),
 };
 
-// ── Status pipeline ──────────────────────────────────────────
 const STATUS_STEPS = [
   "Pending",
   "Accepted",
@@ -138,7 +136,6 @@ const STEP_META: Record<string, { icon: string; color: string }> = {
   Delivered:        { icon: "bag-check-outline",    color: Colors.success },
 };
 
-// ── Animated progress step dot ───────────────────────────────
 function StepDot({
   step,
   index,
@@ -225,6 +222,9 @@ function InfoCard({
 export default function OrderDetails() {
   const { id } = useLocalSearchParams();
   const [order, setOrder] = useState<any>(null);
+  const [showPinModal, setShowPinModal]=useState(false);
+  const[enteredPin, setEnteredPin]=useState("");
+  const[verifyingPin, setVerifyingPin]=useState(false);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -233,6 +233,37 @@ export default function OrderDetails() {
     });
     return () => unsub();
   }, []);
+
+ const navigateToCustomer = async () => {
+  const latitude = order?.address?.latitude;
+  const longitude = order?.address?.longitude;
+
+  if (latitude == null || longitude == null) {
+    Alert.alert(
+      "Location unavailable",
+      "This order doesn't contain customer coordinates."
+    );
+    return;
+  }
+
+  try {
+    // Try opening Google Maps app directly
+    const appUrl = `google.navigation:q=${latitude},${longitude}`;
+
+    const supported = await Linking.canOpenURL(appUrl);
+
+    if (supported) {
+      await Linking.openURL(appUrl);
+    } else {
+      // Fallback to browser
+      const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+      await Linking.openURL(webUrl);
+    }
+  } catch (error) {
+    Alert.alert("Error", "Unable to open navigation.");
+  }
+};
+
 
   const updateStatus = async (status: string) => {
     if (!order) return;
@@ -245,13 +276,56 @@ export default function OrderDetails() {
       return;
     }
     try {
+      if(status==="Delivered"){
+        setShowPinModal(true);
+        return;
+      }
+
       await updateDoc(doc(db, "orders", id as string), { status });
+
+      if (status === "Out For Delivery") {
+        await navigateToCustomer();
+      }
+
       Alert.alert("Updated", `Order marked as ${status}`);
     } catch (e) {
       console.log(e);
       Alert.alert("Error", "Failed to update order status");
     }
   };
+
+  const verifyDeliveryPin=async()=>{
+    if(enteredPin.length!==4){
+      Alert.alert("Invalid PIN","Please eter the 4-digit delivery PIN");
+      return;  
+    }
+    setVerifyingPin(true);
+
+    try{
+      if(enteredPin !== order.delivery?.pin){
+        Alert.alert("Incorrect PIN","The delivery PIN entered is incorrect");
+        return;
+      }
+
+      await updateDoc(doc(db,"orders",id as string),{
+        status:"Delivered",
+        "delivery.verified":true,
+        "delivered.verifiedAt":new Date(),
+      });
+
+      setShowPinModal(false);
+      setEnteredPin("");
+
+      Alert.alert("Delivery Complete","Order has been marked as delivered");
+    }catch (e){
+      console.log(e);
+      Alert.alert("Error","Unable to verify delivery PIN.");
+    }finally{
+      setVerifyingPin(false);
+    }
+  };
+
+
 
   if (!order) {
     return (
@@ -378,6 +452,19 @@ export default function OrderDetails() {
           ) : null}
         </Animated.View>
 
+        {order.status==="Out For Delivery" && (
+          <TouchableOpacity style={styles.printBtn}
+          onPress={navigateToCustomer}>
+            <LinearGradient colors={["#34C759","#2FB75A"]}
+            style={styles.printBtnGradient}>
+              <Ionicons name="navigate-outline" size={20} color="#FFF"/>
+              <Text style={styles.printBtnText}>
+                Navigate to Customer
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
+
         {/* ── Order ID & Date ── */}
         <InfoCard icon="receipt-outline" iconColor={Colors.primary} label="Order Info" delay={160}>
           <View style={styles.infoRow}>
@@ -433,6 +520,9 @@ export default function OrderDetails() {
           </View>
         </InfoCard>
 
+        
+
+
         {/* ── Items ── */}
         <InfoCard icon="bag-outline" iconColor={Colors.warning} label={`Items (${order.items?.length ?? 0})`} delay={310}>
           {order.items?.map((item: any, i: number) => (
@@ -483,6 +573,115 @@ export default function OrderDetails() {
         </Animated.View>
         <View style={{ height: 40 }} />
       </ScrollView>
+      <Modal
+  visible={showPinModal}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setShowPinModal(false)}
+>
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.4)",
+      justifyContent: "flex-end",
+    }}
+  >
+    <View
+      style={{
+        backgroundColor: "#fff",
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        padding: 24,
+      }}
+    >
+      <View
+        style={{
+          alignSelf: "center",
+          width: 45,
+          height: 5,
+          borderRadius: 5,
+          backgroundColor: "#DDD",
+          marginBottom: 20,
+        }}
+      />
+
+      <Text
+        style={{
+          fontSize: 22,
+          fontWeight: "700",
+          textAlign: "center",
+        }}
+      >
+        Verify Delivery
+      </Text>
+
+      <Text
+        style={{
+          marginTop: 8,
+          textAlign: "center",
+          color: "#666",
+          lineHeight: 22,
+        }}
+      >
+        Ask the customer for their 4-digit delivery PIN.
+      </Text>
+
+      <TextInput
+        value={enteredPin}
+        onChangeText={setEnteredPin}
+        keyboardType="number-pad"
+        maxLength={4}
+        placeholder="----"
+        style={{
+          marginTop: 28,
+          borderWidth: 1,
+          borderColor: "#DDD",
+          borderRadius: 16,
+          height: 60,
+          textAlign: "center",
+          fontSize: 28,
+          letterSpacing: 14,
+          fontWeight: "700",
+        }}
+      />
+
+      <TouchableOpacity
+        style={{
+          marginTop: 24,
+          borderRadius: 18,
+          overflow: "hidden",
+        }}
+        onPress={verifyDeliveryPin}
+        disabled={verifyingPin}
+      >
+        <LinearGradient
+          colors={[Colors.primary, Colors.accent]}
+          style={{
+            height: 56,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          {verifyingPin ? (
+            <Text style={{ color: "#FFF", fontWeight: "600" }}>
+              Verifying...
+            </Text>
+          ) : (
+            <Text
+              style={{
+                color: "#FFF",
+                fontSize: 16,
+                fontWeight: "700",
+              }}
+            >
+              Verify & Complete Delivery
+            </Text>
+          )}
+        </LinearGradient>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
     </View>
   );
 }
@@ -570,7 +769,8 @@ const styles = StyleSheet.create<MainStyles>({
   printBtn: {
   borderRadius: Radius.xl,
   overflow: "hidden",
-  marginTop: 8,
+  marginTop: 1,
+  marginBottom:6,
   ...Shadow.colored(Colors.primary),
 },
 

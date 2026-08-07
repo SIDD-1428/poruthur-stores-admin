@@ -4,6 +4,8 @@ import {
   ThemeProvider,
 } from "@react-navigation/native";
 
+
+
 import {
   Stack,
 } from "expo-router";
@@ -47,6 +49,7 @@ export default function RootLayout() {
   const [loading, setLoading] =
     useState(true);
 
+    
   useEffect(() => {
     const checkAdminAndSetUser = async (currentUser: any) => {
       if (!currentUser) {
@@ -96,6 +99,7 @@ export default function RootLayout() {
 
     return unsubscribe;
   }, []);
+
 
   if (loading) {
     return null;

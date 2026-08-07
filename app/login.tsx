@@ -99,7 +99,6 @@ export default function AdminLogin() {
                 setIsLoading(false);
                 return;
             }
-
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             Alert.alert("Success", "Admin Login Successful");
             router.replace("/(tabs)/dashboard");

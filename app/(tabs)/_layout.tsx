@@ -1,6 +1,5 @@
-import { Tabs } from "expo-router";
-import React from "react";
 import { Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -51,7 +50,7 @@ export default function TabLayout() {
 
       {/* Delivery */}
       <Tabs.Screen
-        name="delivery"
+        name="delivery-settings"
         options={{
           title: "Delivery",
           tabBarIcon: ({ color, size }) => (
