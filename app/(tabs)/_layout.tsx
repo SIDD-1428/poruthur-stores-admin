@@ -10,7 +10,9 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   return (
+    
     <Tabs
+      initialRouteName="dashboard"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor:
