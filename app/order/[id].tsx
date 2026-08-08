@@ -191,7 +191,6 @@ function StepDot({
   );
 }
 
-// ── Info card ─────────────────────────────────────────────────
 function InfoCard({
   icon,
   iconColor,
@@ -218,7 +217,6 @@ function InfoCard({
   );
 }
 
-// ── Main screen ───────────────────────────────────────────────
 export default function OrderDetails() {
   const { id } = useLocalSearchParams();
   const [order, setOrder] = useState<any>(null);
@@ -228,42 +226,64 @@ export default function OrderDetails() {
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "orders", id as string), (snap) => {
-      if (snap.exists()) setOrder({ id: snap.id, ...snap.data() });
-    });
-    return () => unsub();
-  }, []);
-
- const navigateToCustomer = async () => {
-  const latitude = order?.address?.latitude;
-  const longitude = order?.address?.longitude;
-
-  if (latitude == null || longitude == null) {
-    Alert.alert(
-      "Location unavailable",
-      "This order doesn't contain customer coordinates."
-    );
-    return;
-  }
-
-  try {
-    // Try opening Google Maps app directly
-    const appUrl = `google.navigation:q=${latitude},${longitude}`;
-
-    const supported = await Linking.canOpenURL(appUrl);
-
-    if (supported) {
-      await Linking.openURL(appUrl);
-    } else {
-      // Fallback to browser
-      const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
-      await Linking.openURL(webUrl);
+    if (!id) {
+      console.log("No order ID provided");
+      return;
     }
-  } catch (error) {
-    Alert.alert("Error", "Unable to open navigation.");
-  }
-};
 
+    const orderRef = doc(db, "orders", id as string);
+
+    const unsub = onSnapshot(
+      orderRef,
+      (snap) => {
+        if (snap.exists()) {
+          setOrder({
+            id: snap.id,
+            ...snap.data(),
+          });
+        } else {
+          console.log("Order does not exist:", id);
+          setOrder(null);
+        }
+      },
+      (error) => {
+        console.error("ORDER DETAIL ERROR:", error);
+        Alert.alert(
+          "Error",
+          "Unable to load this order."
+        );
+      }
+    );
+
+    return () => unsub();
+  }, [id]);
+
+  const navigateToCustomer = async () => {
+    const latitude = order?.address?.latitude;
+    const longitude = order?.address?.longitude;
+
+    if (latitude == null || longitude == null) {
+      Alert.alert(
+        "Location unavailable",
+        "This order doesn't contain customer coordinates."
+      );
+      return;
+    }
+
+    try {
+      const appUrl = `google.navigation:q=${latitude},${longitude}`;
+      const supported = await Linking.canOpenURL(appUrl);
+
+      if (supported) {
+        await Linking.openURL(appUrl);
+      } else {
+        const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+        await Linking.openURL(webUrl);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Unable to open navigation.");
+    }
+  };
 
   const updateStatus = async (status: string) => {
     if (!order) return;
@@ -296,7 +316,7 @@ export default function OrderDetails() {
 
   const verifyDeliveryPin=async()=>{
     if(enteredPin.length!==4){
-      Alert.alert("Invalid PIN","Please eter the 4-digit delivery PIN");
+      Alert.alert("Invalid PIN","Please enter the 4-digit delivery PIN");
       return;  
     }
     setVerifyingPin(true);
@@ -307,10 +327,16 @@ export default function OrderDetails() {
         return;
       }
 
-      await updateDoc(doc(db,"orders",id as string),{
-        status:"Delivered",
-        "delivery.verified":true,
-        "delivered.verifiedAt":new Date(),
+      await updateDoc(doc(db, "orders", id as string), {
+        status: "Delivered",
+        "delivery.verified": true,
+        "delivery.verifiedAt": new Date(),
+      });
+
+      await updateDoc(doc(db, "orders", id as string), {
+        status: "Delivered",
+        "delivery.verified": true,
+        "delivery.verifiedAt": new Date(),
       });
 
       setShowPinModal(false);
@@ -324,8 +350,6 @@ export default function OrderDetails() {
       setVerifyingPin(false);
     }
   };
-
-
 
   if (!order) {
     return (
@@ -360,30 +384,67 @@ export default function OrderDetails() {
     ? Colors.success
     : Colors.primary;
 
-  // Get the date from invoice or createdAt
   const orderDate = order.invoice?.issuedAt ?? order.createdAt;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* ── Header ── */}
       <Animated.View entering={FadeInDown.delay(40).springify()} style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={22} color={Colors.primary} />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
+        
+        <View style={styles.headerCenter}>
           <Text style={styles.title}>Order Details</Text>
           <Text style={styles.orderId}>#{order.id.slice(0, 8).toUpperCase()}</Text>
         </View>
-        {/* Status pill */}
-        <View style={[styles.statusPill, { backgroundColor: statusColor + "15", borderColor: statusColor + "40" }]}>
-          <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-          <Text style={[styles.statusPillText, { color: statusColor }]}>{order.status}</Text>
+        
+        <View style={styles.headerRight}>
+          <View style={[styles.statusPill, { backgroundColor: statusColor + "15", borderColor: statusColor + "40" }]}>
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <Text style={[styles.statusPillText, { color: statusColor }]}>{order.status}</Text>
+          </View>
+
+          <View
+            style={[
+              styles.paymentBadge,
+              order.payment?.method === "QR Payment"
+                ? styles.qrPaymentBadge
+                : styles.codPaymentBadge,
+            ]}
+          >
+            <Ionicons
+              name={
+                order.payment?.method === "QR Payment"
+                  ? "qr-code-outline"
+                  : "cash-outline"
+              }
+              size={12}
+              color={
+                order.payment?.method === "QR Payment"
+                  ? "#5856D6"
+                  : "#34C759"
+              }
+            />
+            <Text
+              style={[
+                styles.paymentBadgeText,
+                {
+                  color:
+                    order.payment?.method === "QR Payment"
+                      ? "#5856D6"
+                      : "#34C759",
+                },
+              ]}
+            >
+              {order.payment?.method === "QR Payment"
+                ? "QR Payment"
+                : "Cash on Delivery"}
+            </Text>
+          </View>
         </View>
       </Animated.View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-
-        {/* ── Progress Stepper ── */}
         <Animated.View entering={FadeInDown.delay(100).springify().damping(18)} style={styles.stepperCard}>
           <View style={styles.stepperHeader}>
             <Text style={styles.stepperTitle}>
@@ -396,7 +457,6 @@ export default function OrderDetails() {
             )}
           </View>
 
-          {/* Progress bar */}
           <View style={styles.progressTrack}>
             <Animated.View
               entering={FadeInUp.delay(200).duration(600)}
@@ -407,7 +467,6 @@ export default function OrderDetails() {
             />
           </View>
 
-          {/* Step dots */}
           <View style={styles.stepsRow}>
             {STATUS_STEPS.map((step, i) => (
               <StepDot
@@ -420,7 +479,6 @@ export default function OrderDetails() {
             ))}
           </View>
 
-          {/* Cancelled / Completed / Next Action */}
           {isCancelled ? (
             <Animated.View entering={ZoomIn.delay(300).springify()} style={styles.cancelledBanner}>
               <Ionicons name="close-circle" size={18} color={Colors.danger} style={{ marginRight: 8 }} />
@@ -465,7 +523,6 @@ export default function OrderDetails() {
           </TouchableOpacity>
         )}
 
-        {/* ── Order ID & Date ── */}
         <InfoCard icon="receipt-outline" iconColor={Colors.primary} label="Order Info" delay={160}>
           <View style={styles.infoRow}>
             <Text style={styles.infoKey}>Order ID</Text>
@@ -489,7 +546,6 @@ export default function OrderDetails() {
           </View>
         </InfoCard>
 
-        {/* ── Customer ── */}
         <InfoCard icon="person-outline" iconColor={Colors.accent} label="Customer" delay={210}>
           <View style={styles.infoRow}>
             <Text style={styles.infoKey}>Name</Text>
@@ -505,7 +561,6 @@ export default function OrderDetails() {
           </View>
         </InfoCard>
 
-        {/* ── Delivery Address ── */}
         <InfoCard icon="location-outline" iconColor={Colors.success} label="Delivery Address" delay={260}>
           <View style={styles.addressBlock}>
             <Text style={styles.addressType}>{order.address?.type || "Home"}</Text>
@@ -520,10 +575,6 @@ export default function OrderDetails() {
           </View>
         </InfoCard>
 
-        
-
-
-        {/* ── Items ── */}
         <InfoCard icon="bag-outline" iconColor={Colors.warning} label={`Items (${order.items?.length ?? 0})`} delay={310}>
           {order.items?.map((item: any, i: number) => (
             <View
@@ -539,7 +590,6 @@ export default function OrderDetails() {
           ))}
         </InfoCard>
 
-        {/* ── Bill Summary ── */}
         <InfoCard icon="wallet-outline" iconColor={Colors.primary} label="Bill Summary" delay={360}>
           <View style={styles.infoRow}>
             <Text style={styles.infoKey}>Subtotal</Text>
@@ -573,122 +623,120 @@ export default function OrderDetails() {
         </Animated.View>
         <View style={{ height: 40 }} />
       </ScrollView>
+
       <Modal
-  visible={showPinModal}
-  transparent
-  animationType="slide"
-  onRequestClose={() => setShowPinModal(false)}
->
-  <View
-    style={{
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.4)",
-      justifyContent: "flex-end",
-    }}
-  >
-    <View
-      style={{
-        backgroundColor: "#fff",
-        borderTopLeftRadius: 28,
-        borderTopRightRadius: 28,
-        padding: 24,
-      }}
-    >
-      <View
-        style={{
-          alignSelf: "center",
-          width: 45,
-          height: 5,
-          borderRadius: 5,
-          backgroundColor: "#DDD",
-          marginBottom: 20,
-        }}
-      />
-
-      <Text
-        style={{
-          fontSize: 22,
-          fontWeight: "700",
-          textAlign: "center",
-        }}
+        visible={showPinModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPinModal(false)}
       >
-        Verify Delivery
-      </Text>
-
-      <Text
-        style={{
-          marginTop: 8,
-          textAlign: "center",
-          color: "#666",
-          lineHeight: 22,
-        }}
-      >
-        Ask the customer for their 4-digit delivery PIN.
-      </Text>
-
-      <TextInput
-        value={enteredPin}
-        onChangeText={setEnteredPin}
-        keyboardType="number-pad"
-        maxLength={4}
-        placeholder="----"
-        style={{
-          marginTop: 28,
-          borderWidth: 1,
-          borderColor: "#DDD",
-          borderRadius: 16,
-          height: 60,
-          textAlign: "center",
-          fontSize: 28,
-          letterSpacing: 14,
-          fontWeight: "700",
-        }}
-      />
-
-      <TouchableOpacity
-        style={{
-          marginTop: 24,
-          borderRadius: 18,
-          overflow: "hidden",
-        }}
-        onPress={verifyDeliveryPin}
-        disabled={verifyingPin}
-      >
-        <LinearGradient
-          colors={[Colors.primary, Colors.accent]}
+        <View
           style={{
-            height: 56,
-            justifyContent: "center",
-            alignItems: "center",
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.4)",
+            justifyContent: "flex-end",
           }}
         >
-          {verifyingPin ? (
-            <Text style={{ color: "#FFF", fontWeight: "600" }}>
-              Verifying...
-            </Text>
-          ) : (
+          <View
+            style={{
+              backgroundColor: "#fff",
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              padding: 24,
+            }}
+          >
+            <View
+              style={{
+                alignSelf: "center",
+                width: 45,
+                height: 5,
+                borderRadius: 5,
+                backgroundColor: "#DDD",
+                marginBottom: 20,
+              }}
+            />
+
             <Text
               style={{
-                color: "#FFF",
-                fontSize: 16,
+                fontSize: 22,
                 fontWeight: "700",
+                textAlign: "center",
               }}
             >
-              Verify & Complete Delivery
+              Verify Delivery
             </Text>
-          )}
-        </LinearGradient>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
+
+            <Text
+              style={{
+                marginTop: 8,
+                textAlign: "center",
+                color: "#666",
+                lineHeight: 22,
+              }}
+            >
+              Ask the customer for their 4-digit delivery PIN.
+            </Text>
+
+            <TextInput
+              value={enteredPin}
+              onChangeText={setEnteredPin}
+              keyboardType="number-pad"
+              maxLength={4}
+              placeholder="----"
+              style={{
+                marginTop: 28,
+                borderWidth: 1,
+                borderColor: "#DDD",
+                borderRadius: 16,
+                height: 60,
+                textAlign: "center",
+                fontSize: 28,
+                letterSpacing: 14,
+                fontWeight: "700",
+              }}
+            />
+
+            <TouchableOpacity
+              style={{
+                marginTop: 24,
+                borderRadius: 18,
+                overflow: "hidden",
+              }}
+              onPress={verifyDeliveryPin}
+              disabled={verifyingPin}
+            >
+              <LinearGradient
+                colors={[Colors.primary, Colors.accent]}
+                style={{
+                  height: 56,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                {verifyingPin ? (
+                  <Text style={{ color: "#FFF", fontWeight: "600" }}>
+                    Verifying...
+                  </Text>
+                ) : (
+                  <Text
+                    style={{
+                      color: "#FFF",
+                      fontSize: 16,
+                      fontWeight: "700",
+                    }}
+                  >
+                    Verify & Complete Delivery
+                  </Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
-// ─────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────
 type MainStyles = {
   container: ViewStyle;
   loadingContainer: ViewStyle;
@@ -696,6 +744,8 @@ type MainStyles = {
   loadingCircle: ViewStyle;
   loadingText: TextStyle;
   header: ViewStyle;
+  headerCenter: ViewStyle;
+  headerRight: ViewStyle;
   backBtn: ViewStyle;
   title: TextStyle;
   orderId: TextStyle;
@@ -739,9 +789,13 @@ type MainStyles = {
   supportBtn: ViewStyle;
   supportBtnGrad: ViewStyle;
   supportBtnText: TextStyle;
-  printBtn:ViewStyle;
-  printBtnGradient:ViewStyle,
-  printBtnText:TextStyle,
+  printBtn: ViewStyle;
+  printBtnGradient: ViewStyle;
+  printBtnText: TextStyle;
+  paymentBadge: ViewStyle;
+  qrPaymentBadge: ViewStyle;
+  codPaymentBadge: ViewStyle;
+  paymentBadgeText: TextStyle;
 };
 
 type StepStyles = {
@@ -767,26 +821,26 @@ const styles = StyleSheet.create<MainStyles>({
   },
 
   printBtn: {
-  borderRadius: Radius.xl,
-  overflow: "hidden",
-  marginTop: 1,
-  marginBottom:6,
-  ...Shadow.colored(Colors.primary),
-},
+    borderRadius: Radius.xl,
+    overflow: "hidden",
+    marginTop: 1,
+    marginBottom: 6,
+    ...Shadow.colored(Colors.primary),
+  },
 
-printBtnGradient: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  paddingVertical: 16,
-  gap: 10,
-},
+  printBtnGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    gap: 10,
+  },
 
-printBtnText: {
-  color: "#FFF",
-  fontSize: 15,
-  fontWeight: "600",
-},
+  printBtnText: {
+    color: "#FFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
 
   loadingContainer: { 
     flex: 1, 
@@ -825,6 +879,18 @@ printBtnText: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.separator,
   },
+
+  headerCenter: {
+    flex: 1,
+    marginRight: 8,
+  },
+
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 1,
+  },
   
   backBtn: {
     width: 40, 
@@ -837,7 +903,8 @@ printBtnText: {
   
   title: { 
     ...Typography.title2, 
-    color: Colors.textPrimary 
+    color: Colors.textPrimary,
+    fontSize: 18,
   },
   
   orderId: { 
@@ -850,20 +917,20 @@ printBtnText: {
     flexDirection: "row",
     alignItems: "center",
     borderRadius: Radius.full,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderWidth: 1,
-    gap: 6,
+    gap: 5,
   },
   
   statusDot: { 
-    width: 8, 
-    height: 8, 
-    borderRadius: 4 
+    width: 6, 
+    height: 6, 
+    borderRadius: 3 
   },
   
   statusPillText: { 
-    fontSize: 12, 
+    fontSize: 10, 
     fontWeight: "600" 
   },
 
@@ -873,7 +940,6 @@ printBtnText: {
     paddingTop: Spacing.md,
   },
 
-  // ── Stepper Card ──
   stepperCard: {
     backgroundColor: Colors.card,
     borderRadius: Radius.xl,
@@ -972,7 +1038,6 @@ printBtnText: {
     fontWeight: "600" 
   },
 
-  // ── Info rows ──
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1067,7 +1132,6 @@ printBtnText: {
     color: Colors.primary 
   },
 
-  // ── Support Section ──
   supportCard: {
     backgroundColor: Colors.card,
     borderRadius: Radius.xl,
@@ -1117,6 +1181,28 @@ printBtnText: {
     fontSize: 13,
     fontWeight: "600",
     color: Colors.primary,
+  },
+
+  paymentBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
+    gap: 4,
+  },
+
+  qrPaymentBadge: {
+    backgroundColor: "#5856D615",
+  },
+
+  codPaymentBadge: {
+    backgroundColor: "#34C75915",
+  },
+
+  paymentBadgeText: {
+    fontSize: 9,
+    fontWeight: "600",
   },
 });
 
@@ -1191,7 +1277,5 @@ const cardStyles = StyleSheet.create<CardStyles>({
     ...Typography.headline,
     color: Colors.textPrimary,
   },
-
-  
   cardBody: {},
 });

@@ -10,6 +10,7 @@ import {
     View,
 } from "react-native";
 
+
 const Colors={
     background:"#FFFFFF",
     card:"#FFFFFF",
@@ -24,11 +25,11 @@ export default function Delivery(){
             <LinearGradient colors={["#000","#333"]}
             style={styles.header}>
                 <Text style={styles.title}>
-                    Delivery
+                    Settings
                 </Text>
 
                 <Text style={styles.subtitle}>
-                    Manage Delivery Settings
+                    Manage Store Settings
                 </Text>
             </LinearGradient>
 
@@ -37,7 +38,7 @@ export default function Delivery(){
 
                 {/*Store*/}
                 <TouchableOpacity style={styles.card}
-                onPress={()=>router.push("/select-shop-loaction")}>
+                onPress={()=>router.push("/select-shop-location")}>
                     <View>
                         <Text style={styles.cardTitle}>
                             Store Location
@@ -79,6 +80,29 @@ export default function Delivery(){
                     </View>
                     <Ionicons name="mail-outline" size={28} color="#000"/>
                 </TouchableOpacity>
+
+                {/* Payment QR */}
+                <TouchableOpacity
+                style={styles.card}
+                onPress={() => router.push("../payment-qr")}
+                >
+                <View>
+                    <Text style={styles.cardTitle}>
+                    Payment QR Code
+                    </Text>
+
+                    <Text style={styles.cardSub}>
+                    Manage customer UPI payments
+                    </Text>
+                </View>
+
+                <Ionicons
+                    name="qr-code-outline"
+                    size={28}
+                    color="#000"
+                />
+                </TouchableOpacity>
+
 
                 {/*Contact*/}
                 <TouchableOpacity style={styles.card}>

@@ -47,6 +47,9 @@ type Address = {
 
 type UserData = {
     name?: string;
+    fullName?: string;
+    firstName?: string;
+    lastName?: string;
     email?: string;
     phone?: string;
     createdAt?: any;
@@ -83,32 +86,38 @@ export default function Customers() {
             }));
 
             const customerData = usersSnapshot.docs.map((doc) => {
-                const user = doc.data() as UserData;
-                const userAddress = addresses.find((a) => a.userId === doc.id);
+            const user = doc.data() as UserData;
+            const userAddress = addresses.find((a) => a.userId === doc.id);
 
-                // Format joined date
-                let joinedDate = "Recently";
-                if (user.createdAt?.toDate) {
-                    const date = user.createdAt.toDate();
-                    joinedDate = date.toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                    });
-                }
+            let joinedDate = "Recently";
 
-                return {
-                    id: doc.id,
-                    name: user.name || "Guest User",
-                    email: user.email || "No email",
-                    phone: userAddress?.phone || user.phone || "-",
-                    address: userAddress?.address || "No address added",
-                    addressType: userAddress?.type || "Not set",
-                    landmark: userAddress?.landmark,
-                    joinedDate,
-                };
-            });
+            if (user.createdAt?.toDate) {
+                const date = user.createdAt.toDate();
 
+                joinedDate = date.toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                });
+            }
+
+            const customerName =
+                user.fullName ||
+                `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
+                user.name ||
+                "Guest User";
+
+            return {
+                id: doc.id,
+                name: customerName,
+                email: user.email || "No email",
+                phone: userAddress?.phone || user.phone || "-",
+                address: userAddress?.address || "No address added",
+                addressType: userAddress?.type || "Not set",
+                landmark: userAddress?.landmark,
+                joinedDate,
+            };
+        });
             setCustomers(customerData);
         } catch (error) {
             console.log(error);

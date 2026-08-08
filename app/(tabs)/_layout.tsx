@@ -15,9 +15,12 @@ export default function TabLayout() {
       initialRouteName="dashboard"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor:
-          Colors[colorScheme ?? "light"].tint,
+        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
         tabBarButton: HapticTab,
+        tabBarStyle: {
+          height: 60,
+          paddingBottom: 8,
+        },
       }}
     >
       {/* Dashboard */}
@@ -25,7 +28,7 @@ export default function TabLayout() {
         name="dashboard"
         options={{
           title: "Dashboard",
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, size }) => (
             <IconSymbol
               size={28}
               name="house.fill"
@@ -35,15 +38,15 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Orders */}
+      {/* Orders - using Ionicons for better compatibility */}
       <Tabs.Screen
         name="index"
         options={{
           title: "Orders",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol
-              size={28}
-              name="shippingbox.fill"
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="bag-outline"
+              size={size}
               color={color}
             />
           ),
@@ -54,10 +57,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="delivery-settings"
         options={{
-          title: "Delivery",
+          title: "Settings",
           tabBarIcon: ({ color, size }) => (
             <Ionicons
-              name="navigate-circle-outline"
+              name="settings-outline"
               size={size}
               color={color}
             />

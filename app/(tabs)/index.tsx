@@ -187,6 +187,45 @@ export default function OrdersDashboard() {
               </Text>
             </View>
 
+            <View
+              style={[
+                styles.paymentBadge,
+                item.payment?.method === "QR Payment"
+                  ? styles.qrPaymentBadge
+                  : styles.codPaymentBadge,
+              ]}
+            >
+              <Ionicons
+                name={
+                  item.payment?.method === "QR Payment"
+                    ? "qr-code-outline"
+                    : "cash-outline"
+                }
+                size={12}
+                color={
+                  item.payment?.method === "QR Payment"
+                    ? "#5856D6"
+                    : "#34C759"
+                }
+              />
+
+              <Text
+                style={[
+                  styles.paymentBadgeText,
+                  {
+                    color:
+                      item.payment?.method === "QR Payment"
+                        ? "#5856D6"
+                        : "#34C759",
+                  },
+                ]}
+              >
+                {item.payment?.method === "QR Payment"
+                  ? "QR Payment"
+                  : "Cash on Delivery"}
+              </Text>
+            </View>
+
             <View style={styles.orderMeta}>
               <View style={styles.metaItem}>
                 <Ionicons name="location-outline" size={12} color={Colors.muted} />
@@ -623,4 +662,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.muted,
   },
+  paymentBadge: {
+  flexDirection: "row",
+  alignItems: "center",
+  alignSelf: "flex-start",
+  paddingHorizontal: 10,
+  paddingVertical: 5,
+  borderRadius: 20,
+  gap: 6,
+  marginBottom: 10,
+},
+
+qrPaymentBadge: {
+  backgroundColor: "#5856D615",
+},
+
+codPaymentBadge: {
+  backgroundColor: "#34C75915",
+},
+
+paymentBadgeText: {
+  fontSize: 11,
+  fontWeight: "600",
+},
 });
