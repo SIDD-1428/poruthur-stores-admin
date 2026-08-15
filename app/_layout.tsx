@@ -7,7 +7,7 @@ import {
 import { Stack, useRouter, useSegments } from "expo-router";
 
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
@@ -16,6 +16,7 @@ import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { auth, db } from "../firebase/config";
+import { registerForPushNotificationsAsync } from "../services/notifications";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -48,11 +49,32 @@ export default function RootLayout() {
             adminDoc.data().email === currentUser.email;
 
           if (isAdmin) {
-            setUser(currentUser);
-          } else {
-            await auth.signOut();
-            setUser(null);
-          }
+  setUser(currentUser);
+
+  // Register this admin device for push notifications
+  try {
+    const token = await registerForPushNotificationsAsync();
+
+    if (token) {
+      await updateDoc(
+        doc(db, "admins", currentUser.uid),
+        {
+          expoPushToken: token,
+        }
+      );
+
+      console.log("Admin notification token saved.");
+    }
+  } catch (error) {
+    console.log(
+      "Failed to register for notifications:",
+      error
+    );
+  }
+} else {
+  await auth.signOut();
+  setUser(null);
+}
         } catch (error) {
           console.log("Admin check failed:", error);
           setUser(null);
