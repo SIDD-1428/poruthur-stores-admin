@@ -8,9 +8,11 @@
     "scheme": "poruthurstoresadmin",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+
     "ios": {
       "supportsTablet": true
     },
+
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -23,10 +25,12 @@
       "package": "com.sidd1428.poruthurstoresadmin",
       "googleServicesFile": "./google-services.json"
     },
+
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+
     "plugins": [
       "expo-router",
       "expo-notifications",
@@ -43,16 +47,19 @@
         }
       ]
     ],
+
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
+
     "extra": {
       "router": {},
       "eas": {
         "projectId": "3416d94a-2936-40c0-a20a-970f1121fd31"
       }
     },
+
     "owner": "sidd1428"
   }
 }

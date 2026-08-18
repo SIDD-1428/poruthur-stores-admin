@@ -5,13 +5,10 @@ import {
 } from "@react-navigation/native";
 
 import { Stack, useRouter, useSegments } from "expo-router";
-
-import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-
 import { StatusBar } from "expo-status-bar";
+import { onAuthStateChanged, User } from "firebase/auth";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
-
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -23,79 +20,75 @@ export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // -----------------------------------------
-  // AUTHENTICATION
-  // -----------------------------------------
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      async (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      try {
+        // No authenticated Firebase user
         if (!currentUser) {
           setUser(null);
-          setLoading(false);
           return;
         }
 
-        try {
-          const adminDoc = await getDoc(
-            doc(db, "admins", currentUser.uid)
-          );
+        // Verify that the Firebase user is an authorized admin
+        const adminRef = doc(db, "admins", currentUser.uid);
+        const adminSnap = await getDoc(adminRef);
 
-          const isAdmin =
-            adminDoc.exists() &&
-            adminDoc.data().email === currentUser.email;
-
-          if (isAdmin) {
-  setUser(currentUser);
-
-  // Register this admin device for push notifications
-  try {
-    const token = await registerForPushNotificationsAsync();
-
-    if (token) {
-      await updateDoc(
-        doc(db, "admins", currentUser.uid),
-        {
-          expoPushToken: token,
-        }
-      );
-
-      console.log("Admin notification token saved.");
-    }
-  } catch (error) {
-    console.log(
-      "Failed to register for notifications:",
-      error
-    );
-  }
-} else {
-  await auth.signOut();
-  setUser(null);
-}
-        } catch (error) {
-          console.log("Admin check failed:", error);
+        if (!adminSnap.exists()) {
+          console.log("User is not an authorized admin.");
+          await auth.signOut();
           setUser(null);
-        } finally {
-          setLoading(false);
+          return;
         }
+
+        const adminData = adminSnap.data();
+
+        if (adminData.email !== currentUser.email) {
+          console.log("Admin email mismatch.");
+          await auth.signOut();
+          setUser(null);
+          return;
+        }
+
+        // Valid admin
+        setUser(currentUser);
+
+        // Register push notification token
+        try {
+          const token = await registerForPushNotificationsAsync();
+
+          if (token) {
+            await updateDoc(adminRef, {
+              expoPushToken: token,
+            });
+
+            console.log("Admin notification token saved.");
+          }
+        } catch (notificationError) {
+          console.log(
+            "Notification registration failed:",
+            notificationError
+          );
+        }
+      } catch (error) {
+        console.log("Authentication bootstrap failed:", error);
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-    );
+    });
 
     return unsubscribe;
   }, []);
 
-  // -----------------------------------------
-  // ROUTING
-  // -----------------------------------------
   useEffect(() => {
     if (loading) return;
 
     const firstSegment = segments[0];
 
-    // Not logged in
+    // User is NOT authenticated
     if (!user) {
       if (firstSegment !== "login") {
         router.replace("/login");
@@ -103,23 +96,16 @@ export default function RootLayout() {
       return;
     }
 
-    // Logged in
-    // Only redirect if we're at the root.
-    if (!firstSegment) {
+    // User IS authenticated
+    if (!firstSegment || firstSegment === "login") {
       router.replace("/(tabs)/dashboard");
     }
   }, [user, loading, segments]);
 
-  // -----------------------------------------
-  // LOADING
-  // -----------------------------------------
   if (loading) {
     return null;
   }
 
-  // -----------------------------------------
-  // NAVIGATION
-  // -----------------------------------------
   return (
     <ThemeProvider
       value={
