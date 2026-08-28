@@ -3,27 +3,28 @@ import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-    doc,
-    getDoc,
-    updateDoc,
+  deleteDoc,
+  doc,
+  getDoc,
+  updateDoc,
 } from "firebase/firestore";
 import {
-    getDownloadURL,
-    ref,
-    uploadBytes,
+  getDownloadURL,
+  ref,
+  uploadBytes,
 } from "firebase/storage";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { db, storage } from "../firebase/config";
 
@@ -122,6 +123,53 @@ export default function CategoryEdit(){
     );
   }
 };
+
+const deleteCategory = () => {
+  Alert.alert(
+    "Delete Category?",
+    `Are you sure you want to delete "${name}"? This action cannot be undone.`,
+    [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            setLoading(true);
+
+            await deleteDoc(
+              doc(db, "categories", id as string)
+            );
+
+            Alert.alert(
+              "Deleted",
+              "Category deleted successfully.",
+              [
+                {
+                  text: "OK",
+                  onPress: () => router.back(),
+                },
+              ]
+            );
+          } catch (e) {
+            console.log("Delete category error:", e);
+
+            setLoading(false);
+
+            Alert.alert(
+              "Delete Failed",
+              "Unable to delete the category. Please try again."
+            );
+          }
+        },
+      },
+    ]
+  );
+};
+
 if (loading) {
   return (
     <View
@@ -254,6 +302,22 @@ return (
         </LinearGradient>
       </TouchableOpacity>
 
+      <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={deleteCategory}
+          style={styles.deleteButton}
+        >
+          <Ionicons
+            name="trash-outline"
+            size={20}
+            color="#D32F2F"
+          />
+
+          <Text style={styles.deleteText}>
+            Delete Category
+          </Text>
+        </TouchableOpacity>
+
     </ScrollView>
   </View>
 );
@@ -371,6 +435,24 @@ container: {
 saveText: {
   color: "#FFF",
   fontSize: 17,
+  fontWeight: "700",
+},
+deleteButton: {
+  height: 56,
+  borderRadius: 18,
+  borderWidth: 1,
+  borderColor: "#F1CACA",
+  backgroundColor: "#FFF5F5",
+  justifyContent: "center",
+  alignItems: "center",
+  flexDirection: "row",
+  gap: 8,
+  marginBottom: 50,
+},
+
+deleteText: {
+  color: "#D32F2F",
+  fontSize: 16,
   fontWeight: "700",
 },
 });
