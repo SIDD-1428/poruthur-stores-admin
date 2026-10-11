@@ -4,11 +4,11 @@ import { router } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { db } from "../../firebase/config";
@@ -178,27 +178,6 @@ export default function Delivery() {
             color="#000"
           />
         </TouchableOpacity>
-
-
-        {/* Contact */}
-        <TouchableOpacity style={styles.card}>
-          <View>
-            <Text style={styles.cardTitle}>
-              Store Contact
-            </Text>
-
-            <Text style={styles.cardSub}>
-              Phone & Whatsapp
-            </Text>
-          </View>
-
-          <Ionicons
-            name="call-outline"
-            size={28}
-            color="#000"
-          />
-        </TouchableOpacity>
-
       </ScrollView>
     </View>
   );

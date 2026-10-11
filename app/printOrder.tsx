@@ -109,10 +109,10 @@ export default function PrintOrder() {
             </View>
             <View style={styles.logoTextContainer}>
               <Text style={styles.storeName} numberOfLines={1}>
-                PORUTHUR STORES
+                BONMART
               </Text>
               <Text style={styles.tagline} numberOfLines={1}>
-                Fresh Groceries Delivered
+                Shop Good, Live Good
               </Text>
             </View>
           </View>
@@ -298,7 +298,7 @@ export default function PrintOrder() {
         {/* ================= FOOTER ================= */}
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>
-            Thank you for shopping with Poruthur Stores
+            Thank you for shopping with BonMart
           </Text>
           <Text style={styles.footerSmall}>
             This is a computer generated invoice and does not require a signature.

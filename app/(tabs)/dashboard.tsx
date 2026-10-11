@@ -292,9 +292,7 @@ export default function Dashboard() {
 
             <View style={styles.actionsGrid}>
                 <Animated.View entering={FadeInRight.delay(350).springify()} style={styles.actionWrapper}>
-                    <TouchableOpacity style={styles.actionCard} onPress={() =>
-  router.navigate("/")
-}>
+                                        <TouchableOpacity style={styles.actionCard} onPress={() => handleNavigation("/(tabs)")}>
                         <View style={styles.actionGradient}>
                             <View style={[styles.actionIcon, { backgroundColor: Colors.primaryLight }]}>
                                 <Ionicons name="cart-outline" size={24} color={Colors.primary} />

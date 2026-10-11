@@ -5,8 +5,10 @@ import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -314,43 +316,49 @@ export default function OrderDetails() {
     }
   };
 
-  const verifyDeliveryPin=async()=>{
-    if(enteredPin.length!==4){
-      Alert.alert("Invalid PIN","Please enter the 4-digit delivery PIN");
-      return;  
+  const verifyDeliveryPin = async () => {
+  if (enteredPin.length !== 4) {
+    Alert.alert(
+      "Invalid PIN",
+      "Please enter the 4-digit delivery PIN"
+    );
+    return;
+  }
+
+  setVerifyingPin(true);
+
+  try {
+    if (enteredPin !== order.delivery?.pin) {
+      Alert.alert(
+        "Incorrect PIN",
+        "The delivery PIN entered is incorrect"
+      );
+      return;
     }
-    setVerifyingPin(true);
 
-    try{
-      if(enteredPin !== order.delivery?.pin){
-        Alert.alert("Incorrect PIN","The delivery PIN entered is incorrect");
-        return;
-      }
+    await updateDoc(doc(db, "orders", id as string), {
+      status: "Delivered",
+      "delivery.verified": true,
+      "delivery.verifiedAt": new Date(),
+    });
 
-      await updateDoc(doc(db, "orders", id as string), {
-        status: "Delivered",
-        "delivery.verified": true,
-        "delivery.verifiedAt": new Date(),
-      });
+    setShowPinModal(false);
+    setEnteredPin("");
 
-      await updateDoc(doc(db, "orders", id as string), {
-        status: "Delivered",
-        "delivery.verified": true,
-        "delivery.verifiedAt": new Date(),
-      });
-
-      setShowPinModal(false);
-      setEnteredPin("");
-
-      Alert.alert("Delivery Complete","Order has been marked as delivered");
-    }catch (e){
-      console.log(e);
-      Alert.alert("Error","Unable to verify delivery PIN.");
-    }finally{
-      setVerifyingPin(false);
-    }
-  };
-
+    Alert.alert(
+      "Delivery Complete",
+      "Order has been marked as delivered"
+    );
+  } catch (e) {
+    console.log(e);
+    Alert.alert(
+      "Error",
+      "Unable to verify delivery PIN."
+    );
+  } finally {
+    setVerifyingPin(false);
+  }
+};
   if (!order) {
     return (
       <View style={styles.loadingContainer}>
@@ -624,115 +632,134 @@ export default function OrderDetails() {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      <Modal
-        visible={showPinModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowPinModal(false)}
+     <Modal
+  visible={showPinModal}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setShowPinModal(false)}
+>
+  <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === "ios" ? "padding" : "height"}
+  >
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.4)",
+        justifyContent: "flex-end",
+      }}
+    >
+      <View
+        style={{
+          backgroundColor: "#fff",
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          padding: 24,
+          paddingBottom: Math.max(insets.bottom, 24),
+        }}
       >
+        {/* Drag Handle */}
         <View
           style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.4)",
-            justifyContent: "flex-end",
+            alignSelf: "center",
+            width: 45,
+            height: 5,
+            borderRadius: 5,
+            backgroundColor: "#DDD",
+            marginBottom: 20,
+          }}
+        />
+
+        {/* Title */}
+        <Text
+          style={{
+            fontSize: 22,
+            fontWeight: "700",
+            textAlign: "center",
           }}
         >
-          <View
+          Verify Delivery
+        </Text>
+
+        {/* Description */}
+        <Text
+          style={{
+            marginTop: 8,
+            textAlign: "center",
+            color: "#666",
+            lineHeight: 22,
+          }}
+        >
+          Ask the customer for their 4-digit delivery PIN.
+        </Text>
+
+        {/* PIN Input */}
+        <TextInput
+          value={enteredPin}
+          onChangeText={setEnteredPin}
+          keyboardType="number-pad"
+          maxLength={4}
+          placeholder="----"
+          autoFocus
+          returnKeyType="done"
+          style={{
+            marginTop: 28,
+            borderWidth: 1,
+            borderColor: "#DDD",
+            borderRadius: 16,
+            height: 60,
+            textAlign: "center",
+            fontSize: 28,
+            letterSpacing: 14,
+            fontWeight: "700",
+          }}
+        />
+
+        {/* Verify Button */}
+        <TouchableOpacity
+          style={{
+            marginTop: 24,
+            borderRadius: 18,
+            overflow: "hidden",
+          }}
+          onPress={verifyDeliveryPin}
+          disabled={verifyingPin}
+          activeOpacity={0.85}
+        >
+          <LinearGradient
+            colors={[Colors.primary, Colors.accent]}
             style={{
-              backgroundColor: "#fff",
-              borderTopLeftRadius: 28,
-              borderTopRightRadius: 28,
-              padding: 24,
+              height: 56,
+              justifyContent: "center",
+              alignItems: "center",
             }}
           >
-            <View
-              style={{
-                alignSelf: "center",
-                width: 45,
-                height: 5,
-                borderRadius: 5,
-                backgroundColor: "#DDD",
-                marginBottom: 20,
-              }}
-            />
-
-            <Text
-              style={{
-                fontSize: 22,
-                fontWeight: "700",
-                textAlign: "center",
-              }}
-            >
-              Verify Delivery
-            </Text>
-
-            <Text
-              style={{
-                marginTop: 8,
-                textAlign: "center",
-                color: "#666",
-                lineHeight: 22,
-              }}
-            >
-              Ask the customer for their 4-digit delivery PIN.
-            </Text>
-
-            <TextInput
-              value={enteredPin}
-              onChangeText={setEnteredPin}
-              keyboardType="number-pad"
-              maxLength={4}
-              placeholder="----"
-              style={{
-                marginTop: 28,
-                borderWidth: 1,
-                borderColor: "#DDD",
-                borderRadius: 16,
-                height: 60,
-                textAlign: "center",
-                fontSize: 28,
-                letterSpacing: 14,
-                fontWeight: "700",
-              }}
-            />
-
-            <TouchableOpacity
-              style={{
-                marginTop: 24,
-                borderRadius: 18,
-                overflow: "hidden",
-              }}
-              onPress={verifyDeliveryPin}
-              disabled={verifyingPin}
-            >
-              <LinearGradient
-                colors={[Colors.primary, Colors.accent]}
+            {verifyingPin ? (
+              <Text
                 style={{
-                  height: 56,
-                  justifyContent: "center",
-                  alignItems: "center",
+                  color: "#FFF",
+                  fontWeight: "600",
                 }}
               >
-                {verifyingPin ? (
-                  <Text style={{ color: "#FFF", fontWeight: "600" }}>
-                    Verifying...
-                  </Text>
-                ) : (
-                  <Text
-                    style={{
-                      color: "#FFF",
-                      fontSize: 16,
-                      fontWeight: "700",
-                    }}
-                  >
-                    Verify & Complete Delivery
-                  </Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+                Verifying...
+              </Text>
+            ) : (
+              <Text
+                style={{
+                  color: "#FFF",
+                  fontSize: 16,
+                  fontWeight: "700",
+                }}
+              >
+                Verify & Complete Delivery
+              </Text>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </KeyboardAvoidingView>
+</Modal>
     </View>
   );
 }

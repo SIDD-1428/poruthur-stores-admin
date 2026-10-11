@@ -141,11 +141,11 @@ tr:nth-child(even){
 <div>
 
 <div class="store">
-PORUTHUR STORES
+BonMart
 </div>
 
 <div class="tagline">
-Fresh Groceries Delivered
+Shop Good, Live Good
 </div>
 
 </div>
@@ -316,7 +316,7 @@ ${order.payment?.status ?? "Pending"}
 
 <div class="footer">
 
-<b>Thank you for shopping with Poruthur Stores</b>
+<b>Thank you for shopping with BonMart</b>
 
 <br><br>
 

@@ -17,6 +17,7 @@ import {
     Alert,
     KeyboardAvoidingView,
     Platform,
+    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -74,42 +75,90 @@ export default function AdminLogin() {
 
     const login = async () => {
         if (!email || !password) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            Alert.alert("Missing Information", "Please enter both email and password");
+            Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Error
+            );
+            Alert.alert(
+                "Missing Information",
+                "Please enter both email and password"
+            );
             return;
         }
 
         setIsLoading(true);
+
         try {
-            const credential = await signInWithEmailAndPassword(auth, email, password);
+            const credential = await signInWithEmailAndPassword(
+                auth,
+                email,
+                password
+            );
+
             const uid = credential.user.uid;
 
             console.log("AUTH UID:", uid);
             console.log("AUTH EMAIL:", credential.user.email);
 
-            const adminDoc = await getDoc(doc(db, "admins", uid));
+            const adminDoc = await getDoc(
+                doc(db, "admins", uid)
+            );
 
-            if (!adminDoc.exists() || adminDoc.data().email !== credential.user.email) {
+            if (
+                !adminDoc.exists() ||
+                adminDoc.data().email !== credential.user.email
+            ) {
                 await auth.signOut();
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+
+                Haptics.notificationAsync(
+                    Haptics.NotificationFeedbackType.Error
+                );
+
                 Alert.alert(
                     "Access Denied",
                     "You are not an authorized admin."
                 );
+
                 setIsLoading(false);
                 return;
             }
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Alert.alert("Success", "Admin Login Successful");
+
+            Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success
+            );
+
+            Alert.alert(
+                "Success",
+                "Admin Login Successful"
+            );
+
             router.replace("/(tabs)/dashboard");
         } catch (error: any) {
             let message = "Login Failed";
-            if (error.code === 'auth/invalid-email') message = "Invalid email address";
-            if (error.code === 'auth/user-not-found') message = "No account found with this email";
-            if (error.code === 'auth/wrong-password') message = "Incorrect password";
-            if (error.code === 'auth/too-many-requests') message = "Too many attempts. Try again later";
-            Alert.alert("Login Failed", message);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+
+            if (error.code === "auth/invalid-email") {
+                message = "Invalid email address";
+            }
+
+            if (error.code === "auth/user-not-found") {
+                message = "No account found with this email";
+            }
+
+            if (error.code === "auth/wrong-password") {
+                message = "Incorrect password";
+            }
+
+            if (error.code === "auth/too-many-requests") {
+                message = "Too many attempts. Try again later";
+            }
+
+            Alert.alert(
+                "Login Failed",
+                message
+            );
+
+            Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Error
+            );
         } finally {
             setIsLoading(false);
         }
@@ -120,102 +169,198 @@ export default function AdminLogin() {
             style={styles.container}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-            <View style={styles.contentContainer}>
-                {/* Decorative Elements */}
-                <View style={styles.decorCircle1} />
-                <View style={styles.decorCircle2} />
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                bounces={false}
+            >
+                <View style={styles.contentContainer}>
 
-                <Animated.View style={[styles.formContainer, animatedFormStyle]}>
-                    {/* Brand Header */}
-                    <Animated.View entering={ZoomIn.delay(100)} style={styles.brandContainer}>
-                        <View style={styles.brandIcon}>
-                            <Ionicons name="shield-checkmark-outline" size={32} color={Colors.primary} />
-                        </View>
-                        <Text style={styles.brandName}>Poruthur Stores</Text>
-                        <Text style={styles.brandTagline}>Store Management Dashboard</Text>
-                    </Animated.View>
+                    {/* Decorative Elements */}
+                    <View style={styles.decorCircle1} />
+                    <View style={styles.decorCircle2} />
 
-                    {/* Welcome Section */}
-                    <Animated.View entering={FadeInDown.delay(150)} style={styles.welcomeSection}>
-                        <Text style={styles.title}>Welcome Back</Text>
-                        <Text style={styles.subtitle}>Sign in to manage your store</Text>
-                    </Animated.View>
+                    <Animated.View
+                        style={[
+                            styles.formContainer,
+                            animatedFormStyle,
+                        ]}
+                    >
 
-                    {/* Login Form */}
-                    <Animated.View entering={FadeInUp.delay(200)}>
-                        <InputField
-                            placeholder="admin@store.com"
-                            value={email}
-                            onChangeText={setEmail}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                            leftIcon={<Ionicons name="mail-outline" size={20} color={Colors.muted} />}
-                        />
+                        {/* Brand Header */}
+                        <Animated.View
+                            entering={ZoomIn.delay(100)}
+                            style={styles.brandContainer}
+                        >
+                            <View style={styles.brandIcon}>
+                                <Ionicons
+                                    name="shield-checkmark-outline"
+                                    size={32}
+                                    color={Colors.primary}
+                                />
+                            </View>
 
-                        <InputField
-                            placeholder="••••••••"
-                            secure={!showPassword}
-                            value={password}
-                            onChangeText={setPassword}
-                            leftIcon={<Ionicons name="lock-closed-outline" size={20} color={Colors.muted} />}
-                            rightIcon={
-                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                            <Text style={styles.brandName}>
+                                BonMart Admin
+                            </Text>
+
+                            <Text style={styles.brandTagline}>
+                                Poruthur Store Management Dashboard
+                            </Text>
+                        </Animated.View>
+
+                        {/* Welcome Section */}
+                        <Animated.View
+                            entering={FadeInDown.delay(150)}
+                            style={styles.welcomeSection}
+                        >
+                            <Text style={styles.title}>
+                                Welcome Back
+                            </Text>
+
+                            <Text style={styles.subtitle}>
+                                Sign in to manage your store
+                            </Text>
+                        </Animated.View>
+
+                        {/* Login Form */}
+                        <Animated.View
+                            entering={FadeInUp.delay(200)}
+                        >
+                            <InputField
+                                placeholder="admin@store.com"
+                                value={email}
+                                onChangeText={setEmail}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                leftIcon={
                                     <Ionicons
-                                        name={showPassword ? "eye-off-outline" : "eye-outline"}
+                                        name="mail-outline"
                                         size={20}
                                         color={Colors.muted}
                                     />
-                                </TouchableOpacity>
-                            }
-                        />
-                    </Animated.View>
-
-                    {/* Login Button */}
-                    <Animated.View entering={FadeInUp.delay(250)} style={styles.buttonContainer}>
-                        <PrimaryButton
-                            title={isLoading ? "Authenticating..." : "Sign In"}
-                            onPress={login}
-                            disabled={isLoading}
-                        />
-                        {isLoading && (
-                            <ActivityIndicator
-                                style={styles.loader}
-                                size="small"
-                                color={Colors.primary}
+                                }
                             />
-                        )}
-                    </Animated.View>
 
-                    {/* Divider */}
-                    <Animated.View entering={FadeInUp.delay(300)} style={styles.divider}>
-                        <View style={styles.line} />
-                        <Text style={styles.or}>Secure Access</Text>
-                        <View style={styles.line} />
-                    </Animated.View>
+                            <InputField
+                                placeholder="••••••••"
+                                secure={!showPassword}
+                                value={password}
+                                onChangeText={setPassword}
+                                leftIcon={
+                                    <Ionicons
+                                        name="lock-closed-outline"
+                                        size={20}
+                                        color={Colors.muted}
+                                    />
+                                }
+                                rightIcon={
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            setShowPassword(
+                                                !showPassword
+                                            )
+                                        }
+                                    >
+                                        <Ionicons
+                                            name={
+                                                showPassword
+                                                    ? "eye-off-outline"
+                                                    : "eye-outline"
+                                            }
+                                            size={20}
+                                            color={Colors.muted}
+                                        />
+                                    </TouchableOpacity>
+                                }
+                            />
+                        </Animated.View>
 
-                    {/* Admin Info */}
-                    <Animated.View entering={FadeInUp.delay(350)} style={styles.adminInfo}>
-                        <View style={styles.infoCard}>
-                            <Ionicons name="information-circle-outline" size={20} color={Colors.muted} />
-                            <Text style={styles.infoText}>
-                                Authorized personnel only
+                        {/* Login Button */}
+                        <Animated.View
+                            entering={FadeInUp.delay(250)}
+                            style={styles.buttonContainer}
+                        >
+                            <PrimaryButton
+                                title={
+                                    isLoading
+                                        ? "Authenticating..."
+                                        : "Sign In"
+                                }
+                                onPress={login}
+                                disabled={isLoading}
+                            />
+
+                            {isLoading && (
+                                <ActivityIndicator
+                                    style={styles.loader}
+                                    size="small"
+                                    color={Colors.primary}
+                                />
+                            )}
+                        </Animated.View>
+
+                        {/* Divider */}
+                        <Animated.View
+                            entering={FadeInUp.delay(300)}
+                            style={styles.divider}
+                        >
+                            <View style={styles.line} />
+
+                            <Text style={styles.or}>
+                                Secure Access
                             </Text>
-                        </View>
-                        <View style={styles.infoCard}>
-                            <Ionicons name="shield-outline" size={20} color={Colors.muted} />
-                            <Text style={styles.infoText}>
-                                All actions are logged
-                            </Text>
-                        </View>
-                    </Animated.View>
 
-                    {/* Footer */}
-                    <Animated.View entering={FadeInUp.delay(400)} style={styles.footer}>
-                        <Text style={styles.footerText}>
+                            <View style={styles.line} />
+                        </Animated.View>
+
+                        {/* Admin Info */}
+                        <Animated.View
+                            entering={FadeInUp.delay(350)}
+                            style={styles.adminInfo}
+                        >
+                            <View style={styles.infoCard}>
+                                <Ionicons
+                                    name="information-circle-outline"
+                                    size={20}
+                                    color={Colors.muted}
+                                />
+
+                                <Text style={styles.infoText}>
+                                    Authorized personnel only
+                                </Text>
+                            </View>
+
+                            <View style={styles.infoCard}>
+                                <Ionicons
+                                    name="shield-outline"
+                                    size={20}
+                                    color={Colors.muted}
+                                />
+
+                                <Text style={styles.infoText}>
+                                    All actions are logged
+                                </Text>
+                            </View>
+                        </Animated.View>
+
+                        {/* Footer */}
+                        <Animated.View
+                            entering={FadeInUp.delay(400)}
+                            style={styles.footer}
+                        >
+                            <Text style={styles.footerText}>
+                            </Text>
+                        </Animated.View>
+
+                        <Text style={styles.poweredBy}>
+                            Powered by Green Nexus Studios
                         </Text>
+
                     </Animated.View>
-                </Animated.View>
-            </View>
+                </View>
+            </ScrollView>
         </KeyboardAvoidingView>
     );
 }
@@ -225,10 +370,23 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: Colors.background,
     },
+
+    // ── Scroll Container ──
+    scrollContent: {
+        flexGrow: 1,
+    },
+
     contentContainer: {
-        flex: 1,
+        minHeight: "100%",
         justifyContent: "center",
         padding: 24,
+    },
+
+    poweredBy: {
+        textAlign: "center",
+        fontSize: 11,
+        color: Colors.muted,
+        paddingVertical: 10,
     },
 
     // Decorative Elements
@@ -242,6 +400,7 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.primary,
         opacity: 0.03,
     },
+
     decorCircle2: {
         position: "absolute",
         bottom: -100,
@@ -258,11 +417,17 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.card,
         borderRadius: 32,
         padding: 24,
+
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
         shadowOpacity: 0.05,
         shadowRadius: 20,
+
         elevation: 5,
+
         borderWidth: 1,
         borderColor: Colors.separator,
     },
@@ -272,6 +437,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginBottom: 24,
     },
+
     brandIcon: {
         width: 64,
         height: 64,
@@ -281,12 +447,14 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginBottom: 12,
     },
+
     brandName: {
         fontSize: 22,
         fontWeight: "700",
         color: Colors.textPrimary,
         letterSpacing: -0.3,
     },
+
     brandTagline: {
         fontSize: 12,
         color: Colors.muted,
@@ -297,6 +465,7 @@ const styles = StyleSheet.create({
     welcomeSection: {
         marginBottom: 32,
     },
+
     title: {
         fontSize: 28,
         fontWeight: "700",
@@ -304,6 +473,7 @@ const styles = StyleSheet.create({
         textAlign: "center",
         marginBottom: 8,
     },
+
     subtitle: {
         fontSize: 14,
         color: Colors.textSecondary,
@@ -315,6 +485,7 @@ const styles = StyleSheet.create({
         marginTop: 24,
         marginBottom: 20,
     },
+
     loader: {
         marginTop: 12,
     },
@@ -325,11 +496,13 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginVertical: 24,
     },
+
     line: {
         flex: 1,
         height: 1,
         backgroundColor: Colors.separator,
     },
+
     or: {
         marginHorizontal: 12,
         fontSize: 12,
@@ -342,6 +515,7 @@ const styles = StyleSheet.create({
         gap: 12,
         marginBottom: 24,
     },
+
     infoCard: {
         flexDirection: "row",
         alignItems: "center",
@@ -351,6 +525,7 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.surface,
         borderRadius: 12,
     },
+
     infoText: {
         fontSize: 12,
         color: Colors.textSecondary,
@@ -364,6 +539,7 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: Colors.separator,
     },
+
     footerText: {
         fontSize: 11,
         color: Colors.muted,

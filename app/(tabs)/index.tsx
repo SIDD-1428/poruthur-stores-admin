@@ -14,7 +14,6 @@ import React, {
   useState,
 } from "react";
 import {
-  Dimensions,
   FlatList,
   ScrollView,
   StyleSheet,
@@ -23,16 +22,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, {
-  FadeInDown,
-  FadeInRight,
-  ZoomIn,
-} from "react-native-reanimated";
 import { db } from "../../firebase/config";
 
-const { width } = Dimensions.get("window");
 
-// ── Clean Black/White/Grey Color Scheme ──
 const Colors = {
   background: "#FFFFFF",
   card: "#FFFFFF",
@@ -117,10 +109,18 @@ export default function OrdersDashboard() {
       const statusMatch = filter === "All" ? true : order.status === filter;
       const searchLower = search.toLowerCase();
       const searchMatch =
-        order.customerName?.toLowerCase().includes(searchLower) ||
-        order.customerEmail?.toLowerCase().includes(searchLower) ||
-        order.id?.toLowerCase().includes(searchLower) ||
-        order.address?.address?.toLowerCase().includes(searchLower);
+        String(order.customerName || "")
+          .toLowerCase()
+          .includes(searchLower) ||
+        String(order.customerEmail || "")
+          .toLowerCase()
+          .includes(searchLower) ||
+        String(order.id || "")
+          .toLowerCase()
+          .includes(searchLower) ||
+        String(order.address?.address || "")
+          .toLowerCase()
+          .includes(searchLower);
       return statusMatch && searchMatch;
     });
   }, [orders, filter, search]);
@@ -137,56 +137,102 @@ export default function OrdersDashboard() {
     };
   }, [orders]);
 
-  const totalRevenue = useMemo(() => {
-    return orders
-      .filter((o) => o.status === "Delivered")
-      .reduce((sum, order) => sum + (order.total || 0), 0);
-  }, [orders]);
+ const totalRevenue = useMemo(() => {
+  return orders
+    .filter((o) => o.status === "Delivered")
+    .reduce((sum, order) => sum + Number(order.total || 0), 0);
+}, [orders]);
+
 
   const handleFilterPress = (status: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setFilter(status);
   };
 
-  const renderOrderCard = ({ item, index }: { item: any; index: number }) => (
-    <Animated.View
-      entering={FadeInRight.delay(index * 50).springify().damping(18)}
-    >
+ const renderOrderCard = ({ item, index }: { item: any; index: number }) => {
+  const orderId = String(item?.id || "");
+  const customerName = item?.customerName || "Customer";
+  const total = Number(item?.total || 0);
+  const status = item?.status || "Pending";
+
+  return (
+    <View>
       <TouchableOpacity
         style={styles.orderCard}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+          if (!orderId) {
+            console.log("Invalid order ID:", item);
+            return;
+          }
+
           router.push({
             pathname: "/order/[id]",
-            params: { id: item.id },
+            params: { id: orderId },
           });
         }}
         activeOpacity={0.7}
       >
         <View style={styles.orderGradient}>
+
           <View style={styles.orderHeader}>
             <View style={styles.orderLeft}>
+
               <View style={styles.orderIdContainer}>
-                <Ionicons name="receipt-outline" size={14} color={Colors.primary} />
-                <Text style={styles.orderId}>#{item.id.slice(0, 8).toUpperCase()}</Text>
+                <Ionicons
+                  name="receipt-outline"
+                  size={14}
+                  color={Colors.primary}
+                />
+
+                <Text style={styles.orderId}>
+                  #{orderId.slice(0, 8).toUpperCase()}
+                </Text>
               </View>
+
               <Text style={styles.orderCustomer}>
-                {item.customerName || "Customer"}
+                {customerName}
               </Text>
+
             </View>
+
             <View style={styles.orderRight}>
-              <Text style={styles.orderAmount}>₹{item.total}</Text>
+              <Text style={styles.orderAmount}>
+                ₹{total.toLocaleString()}
+              </Text>
             </View>
           </View>
 
           <View style={styles.orderDetails}>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + "15" }]}>
-              <Ionicons name={getStatusIcon(item.status) as any} size={12} color={getStatusColor(item.status)} />
-              <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                {item.status}
+
+            <View
+              style={[
+                styles.statusBadge,
+                {
+                  backgroundColor:
+                    getStatusColor(status) + "15",
+                },
+              ]}
+            >
+              <Ionicons
+                name={getStatusIcon(status) as any}
+                size={12}
+                color={getStatusColor(status)}
+              />
+
+              <Text
+                style={[
+                  styles.statusText,
+                  {
+                    color: getStatusColor(status),
+                  },
+                ]}
+              >
+                {status}
               </Text>
             </View>
-
+                        {/* Payment Method */}
             <View
               style={[
                 styles.paymentBadge,
@@ -226,15 +272,27 @@ export default function OrdersDashboard() {
               </Text>
             </View>
 
+            {/* Order Meta */}
             <View style={styles.orderMeta}>
               <View style={styles.metaItem}>
-                <Ionicons name="location-outline" size={12} color={Colors.muted} />
+                <Ionicons
+                  name="location-outline"
+                  size={12}
+                  color={Colors.muted}
+                />
+
                 <Text style={styles.metaText} numberOfLines={1}>
                   {item.address?.address?.slice(0, 30) || "No address"}
                 </Text>
               </View>
+
               <View style={styles.metaItem}>
-                <Ionicons name="calendar-outline" size={12} color={Colors.muted} />
+                <Ionicons
+                  name="calendar-outline"
+                  size={12}
+                  color={Colors.muted}
+                />
+
                 <Text style={styles.metaText}>
                   {item.createdAt?.toDate
                     ? item.createdAt.toDate().toLocaleDateString("en-IN", {
@@ -247,22 +305,36 @@ export default function OrdersDashboard() {
                 </Text>
               </View>
             </View>
+                      <View style={styles.orderFooter}>
+            <View style={styles.itemsCount}>
+              <Ionicons
+                name="bag-outline"
+                size={12}
+                color={Colors.muted}
+              />
+
+              <Text style={styles.itemsText}>
+                {item.items?.length || 0} items
+              </Text>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={Colors.muted}
+            />
           </View>
 
-          <View style={styles.orderFooter}>
-            <View style={styles.itemsCount}>
-              <Ionicons name="bag-outline" size={12} color={Colors.muted} />
-              <Text style={styles.itemsText}>{item.items?.length || 0} items</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={Colors.muted} />
           </View>
+
         </View>
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
+};
 
   const EmptyState = () => (
-    <Animated.View entering={ZoomIn.delay(200)} style={styles.emptyContainer}>
+    <View style={styles.emptyContainer}>
       <View style={styles.emptyIcon}>
         <Ionicons name="receipt-outline" size={64} color={Colors.muted} />
       </View>
@@ -270,7 +342,7 @@ export default function OrdersDashboard() {
       <Text style={styles.emptySubtitle}>
         {search ? "Try adjusting your search" : "Orders will appear here"}
       </Text>
-    </Animated.View>
+    </View>
   );
 
   return (
@@ -282,7 +354,7 @@ export default function OrdersDashboard() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
       >
-        <Animated.View entering={FadeInDown.delay(0).springify()} style={styles.header}>
+        <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
@@ -301,11 +373,11 @@ export default function OrdersDashboard() {
               <Text style={styles.headerStatLabel}>Revenue</Text>
             </View>
           </View>
-        </Animated.View>
+        </View>
       </LinearGradient>
 
       {/* Search Bar */}
-      <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.searchWrapper}>
+      <View style={styles.searchWrapper}>
         <View style={styles.searchContainer}>
           <Ionicons name="search-outline" size={20} color={Colors.muted} />
           <TextInput
@@ -321,10 +393,10 @@ export default function OrdersDashboard() {
             </TouchableOpacity>
           )}
         </View>
-      </Animated.View>
+      </View>
 
       {/* Filter Chips */}
-      <Animated.View entering={FadeInDown.delay(150).springify()}>
+      <View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -360,7 +432,7 @@ export default function OrdersDashboard() {
             </TouchableOpacity>
           ))}
         </ScrollView>
-      </Animated.View>
+      </View>
 
       {/* Orders List */}
       {isLoading ? (
@@ -373,7 +445,9 @@ export default function OrdersDashboard() {
       ) : (
         <FlatList
           data={filteredOrders}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) =>
+            String(item?.id || index)
+          }
           renderItem={renderOrderCard}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
