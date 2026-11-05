@@ -152,24 +152,32 @@ export default function ManageBanners() {
                     style={styles.input}
                   />
                   {productPickerBannerId === banner.id && (
-                    <View style={styles.productResults}>
-                      {productsLoading ? (
-                        <ActivityIndicator color="#111" style={{ padding: 14 }} />
-                      ) : matchingProducts.length > 0 ? matchingProducts.map(product => (
-                        <TouchableOpacity key={product.id} style={styles.productResult} onPress={() => {
-                          update(banner.id, { actionTarget: product.id });
-                          setProductSearch("");
-                          setProductPickerBannerId(null);
-                        }}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.productResultName}>{product.name}</Text>
-                            <Text style={styles.hint}>{product.category || "Uncategorised"}{product.price !== undefined ? ` · ₹${product.price}` : ""}</Text>
-                          </View>
-                          <Ionicons name="chevron-forward" size={17} color="#888" />
-                        </TouchableOpacity>
-                      )) : (
-                        <Text style={styles.noProducts}>No matching products found.</Text>
-                      )}
+                    <View style={styles.productResultsContainer}>
+                      <Text style={styles.resultsHeader}>Matching products</Text>
+                      <ScrollView
+                        style={styles.productResults}
+                        nestedScrollEnabled
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator
+                      >
+                        {productsLoading ? (
+                          <ActivityIndicator color="#111" style={{ padding: 14 }} />
+                        ) : matchingProducts.length > 0 ? matchingProducts.map(product => (
+                          <TouchableOpacity key={product.id} style={styles.productResult} onPress={() => {
+                            update(banner.id, { actionTarget: product.id });
+                            setProductSearch("");
+                            setProductPickerBannerId(null);
+                          }}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.productResultName}>{product.name}</Text>
+                              <Text style={styles.hint}>{product.category || "Uncategorised"}{product.price !== undefined ? ` · ₹${product.price}` : ""}</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={17} color="#888" />
+                          </TouchableOpacity>
+                        )) : (
+                          <Text style={styles.noProducts}>No matching products found.</Text>
+                        )}
+                      </ScrollView>
                     </View>
                   )}
                 </>
@@ -198,7 +206,7 @@ const styles=StyleSheet.create({
  card:{backgroundColor:"#FFF",borderRadius:16,padding:14,marginBottom:14,borderWidth:1,borderColor:"#E8E8E8"},cardTop:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:12},cardTitle:{fontSize:16,fontWeight:"700",color:"#111"},
  imagePicker:{height:116,borderRadius:12,backgroundColor:"#F3F3F3",alignItems:"center",justifyContent:"center",overflow:"hidden",borderWidth:1,borderColor:"#E5E5E5",borderStyle:"dashed"},preview:{width:"100%",height:"100%"},
  fieldLabel:{fontSize:13,fontWeight:"700",color:"#333",marginTop:14,marginBottom:8},actions:{flexDirection:"row",flexWrap:"wrap",gap:7},actionChip:{paddingHorizontal:11,paddingVertical:8,borderRadius:18,backgroundColor:"#F2F2F2"},actionSelected:{backgroundColor:"#222"},actionText:{fontSize:12,color:"#444",fontWeight:"600"},actionTextSelected:{color:"#FFF"},
- input:{borderWidth:1,borderColor:"#DDD",borderRadius:10,padding:12,marginTop:10,fontSize:13,color:"#111"},productPicker:{marginTop:2},selectedProduct:{flexDirection:"row",alignItems:"center",backgroundColor:"#F5F5F5",borderRadius:10,padding:12,marginTop:8},selectedProductName:{fontSize:14,fontWeight:"700",color:"#111"},changeProductText:{fontSize:13,fontWeight:"700",color:"#333",padding:8},productResults:{maxHeight:230,borderWidth:1,borderColor:"#E5E5E5",borderRadius:10,marginTop:6,backgroundColor:"#FFF"},productResult:{flexDirection:"row",alignItems:"center",padding:12,borderBottomWidth:1,borderBottomColor:"#EEE"},productResultName:{fontSize:13,fontWeight:"600",color:"#111"},noProducts:{fontSize:12,color:"#888",textAlign:"center",padding:16},reorder:{flexDirection:"row",gap:18,marginTop:12},orderButton:{flexDirection:"row",alignItems:"center",gap:5,paddingVertical:5},orderText:{fontSize:12,color:"#333"},
+ input:{borderWidth:1,borderColor:"#DDD",borderRadius:10,padding:12,marginTop:10,fontSize:13,color:"#111"},productPicker:{marginTop:2},selectedProduct:{flexDirection:"row",alignItems:"center",backgroundColor:"#F5F5F5",borderRadius:10,padding:12,marginTop:8},selectedProductName:{fontSize:14,fontWeight:"700",color:"#111"},changeProductText:{fontSize:13,fontWeight:"700",color:"#333",padding:8},productResultsContainer:{marginTop:8,borderWidth:1,borderColor:"#E5E5E5",borderRadius:10,backgroundColor:"#FFF",overflow:"hidden"},resultsHeader:{fontSize:11,fontWeight:"700",color:"#777",paddingHorizontal:12,paddingVertical:8,backgroundColor:"#F7F7F7",borderBottomWidth:1,borderBottomColor:"#EAEAEA"},productResults:{height:190,flexGrow:0},productResult:{flexDirection:"row",alignItems:"center",padding:12,borderBottomWidth:1,borderBottomColor:"#EEE"},productResultName:{fontSize:13,fontWeight:"600",color:"#111"},noProducts:{fontSize:12,color:"#888",textAlign:"center",padding:16},reorder:{flexDirection:"row",gap:18,marginTop:12},orderButton:{flexDirection:"row",alignItems:"center",gap:5,paddingVertical:5},orderText:{fontSize:12,color:"#333"},
  addButton:{borderWidth:1,borderStyle:"dashed",borderColor:"#AAA",borderRadius:14,padding:15,flexDirection:"row",justifyContent:"center",alignItems:"center",gap:8,marginBottom:14},addText:{fontSize:14,fontWeight:"700",color:"#111"},
  saveButton:{backgroundColor:"#111",borderRadius:14,minHeight:52,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:9},saveText:{color:"#FFF",fontWeight:"700",fontSize:15},footnote:{fontSize:11,color:"#888",lineHeight:17,textAlign:"center",marginTop:14}
 });
