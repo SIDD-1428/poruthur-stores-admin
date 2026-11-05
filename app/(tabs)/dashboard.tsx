@@ -338,6 +338,17 @@ export default function Dashboard() {
                         </View>
                     </TouchableOpacity>
                 </Animated.View>
+                <Animated.View entering={FadeInRight.delay(550).springify()} style={styles.actionWrapper}>
+                    <TouchableOpacity style={styles.actionCard} onPress={() => handleNavigation("/banners")}>
+                        <View style={styles.actionGradient}>
+                            <View style={[styles.actionIcon, { backgroundColor: Colors.primaryLight }]}>
+                                <Ionicons name="images-outline" size={24} color={Colors.primary} />
+                            </View>
+                            <Text style={styles.actionTitle}>Promotional Banners</Text>
+                            <Text style={styles.actionSub}>Manage home-page offers</Text>
+                        </View>
+                    </TouchableOpacity>
+                </Animated.View>
             </View>
 
             {/* ── Recent Orders ── */}
