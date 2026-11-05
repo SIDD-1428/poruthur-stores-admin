@@ -349,6 +349,17 @@ export default function Dashboard() {
                         </View>
                     </TouchableOpacity>
                 </Animated.View>
+                <Animated.View entering={FadeInRight.delay(600).springify()} style={styles.actionWrapper}>
+                    <TouchableOpacity style={styles.actionCard} onPress={() => handleNavigation("/free-delivery-settings")}>
+                        <View style={styles.actionGradient}>
+                            <View style={[styles.actionIcon, { backgroundColor: Colors.primaryLight }]}>
+                                <Ionicons name="pricetag-outline" size={24} color={Colors.primary} />
+                            </View>
+                            <Text style={styles.actionTitle}>Free Delivery</Text>
+                            <Text style={styles.actionSub}>Set minimum order amount</Text>
+                        </View>
+                    </TouchableOpacity>
+                </Animated.View>
             </View>
 
             {/* ── Recent Orders ── */}
