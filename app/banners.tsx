@@ -84,6 +84,7 @@ export default function ManageBanners() {
     if (banners.some(b => b.uploading)) { Alert.alert("Please wait", "A banner image is still uploading."); return; }
     if (banners.some(b => !b.imageUrl)) { Alert.alert("Missing image", "Upload an image or remove the empty banner before saving."); return; }
     if (banners.some(b => b.actionType !== "none" && !b.actionTarget.trim())) { Alert.alert("Missing destination", "Add a destination for each banner action, or choose No action."); return; }
+    if (banners.some(b => b.actionType === "product" && !products.some(product => product.id === b.actionTarget))) { Alert.alert("Select a product", "Choose a valid product from the product search list for every product banner."); return; }
     setSaving(true);
     try {
       await setDoc(doc(db, "settings", "homeBanners"), {
@@ -121,7 +122,7 @@ export default function ManageBanners() {
           {banner.uploading ? <ActivityIndicator color="#111"/> : banner.imageUrl ? <Image source={{uri:banner.imageUrl}} style={styles.preview} resizeMode="cover"/> : <><Ionicons name="image-outline" size={28} color="#888"/><Text style={styles.hint}>Choose banner image · 3:1</Text></>}
         </TouchableOpacity>
         <Text style={styles.fieldLabel}>When tapped</Text>
-        <View style={styles.actions}>{([{value:"none",label:"No action"},{value:"product",label:"Product"},{value:"category",label:"Category"},{value:"url",label:"Website"}] as const).map(option=><TouchableOpacity key={option.value} onPress={()=>update(banner.id,{actionType:option.value})} style={[styles.actionChip,banner.actionType===option.value&&styles.actionSelected]}><Text style={[styles.actionText,banner.actionType===option.value&&styles.actionTextSelected]}>{option.label}</Text></TouchableOpacity>)}</View>
+        <View style={styles.actions}>{([{value:"none",label:"No action"},{value:"product",label:"Product"},{value:"category",label:"Category"},{value:"url",label:"Website"}] as const).map(option=><TouchableOpacity key={option.value} onPress={()=>{ update(banner.id,{actionType:option.value,actionTarget:option.value===banner.actionType?banner.actionTarget:""}); setProductSearch(""); setProductPickerBannerId(null); }} style={[styles.actionChip,banner.actionType===option.value&&styles.actionSelected]}><Text style={[styles.actionText,banner.actionType===option.value&&styles.actionTextSelected]}>{option.label}</Text></TouchableOpacity>)}</View>
         {banner.actionType === "product" ? (() => {
           const selectedProduct = products.find(product => product.id === banner.actionTarget);
           const matchingProducts = products.filter(product =>
