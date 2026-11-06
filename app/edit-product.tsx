@@ -100,8 +100,6 @@ export default function EditProductScreen() {
   const [unit, setUnit] = useState("");
   const [stock, setStock] = useState("");
   const [maxOrderQty, setMaxOrderQty] = useState("");
-  const [presetUnitsEnabled, setPresetUnitsEnabled] = useState(false);
-  const [presetUnits, setPresetUnits] = useState<{ id: string; label: string; baseQuantity: string; price: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -143,8 +141,6 @@ export default function EditProductScreen() {
         setRating(String(data.rating || ""));
         setUnit(data.unit || "");
         setMaxOrderQty(String(data.maxOrderQty || 0));
-        setPresetUnitsEnabled(Boolean(data.presetUnitsEnabled));
-        setPresetUnits(Array.isArray(data.presetUnits) ? data.presetUnits.map((item: any, index: number) => ({ id: String(item.id || index), label: String(item.label || ""), baseQuantity: String(item.baseQuantity ?? ""), price: String(item.price ?? "") })) : []);
       }
     } catch (error) {
       console.log(error);
@@ -267,14 +263,6 @@ export default function EditProductScreen() {
       return;
     }
 
-    if (presetUnitsEnabled) {
-      const validPresets = presetUnits.filter((item) => item.label.trim() && item.baseQuantity.trim() && Number(item.baseQuantity) > 0 && item.price.trim() && Number(item.price) >= 0);
-      if (!unit.trim() || validPresets.length === 0 || validPresets.length !== presetUnits.length) {
-        Alert.alert("Invalid preset units", "Enter a base unit and add a label, positive base quantity and price for every preset.");
-        return;
-      }
-    }
-
     setIsSaving(true);
     try {
       await updateDoc(doc(db, "products", id as string), {
@@ -287,8 +275,6 @@ export default function EditProductScreen() {
         rating: Number(rating) || 0,
         unit: unit || "",
         maxOrderQty: Number(maxOrderQty) || 0,
-        presetUnitsEnabled,
-        presetUnits: presetUnitsEnabled ? presetUnits.map((item) => ({ id: item.id, label: item.label.trim(), baseQuantity: Number(item.baseQuantity), price: Number(item.price) })) : [],
         updatedAt: new Date(),
       });
 
@@ -532,7 +518,7 @@ export default function EditProductScreen() {
           <Text style={styles.sectionTitle}>Inventory Details</Text>
           <InputField
             icon="layers-outline"
-            placeholder={presetUnitsEnabled ? "Stock Quantity (in " + (unit || "base units") + ")" : "Stock Quantity"}
+            placeholder="Stock Quantity"
             value={stock}
             onChangeText={setStock}
             keyboardType="numeric"
@@ -546,36 +532,10 @@ export default function EditProductScreen() {
           />
           <InputField
             icon="scale-outline"
-            placeholder={presetUnitsEnabled ? "Base Unit (kg, g, piece, etc.)" : "Unit (500g, 1kg, etc.)"}
+            placeholder="Unit (500g, 1kg, etc.)"
             value={unit}
             onChangeText={setUnit}
           />
-        {/* Preset unit pricing */}
-        <View style={{ backgroundColor: "#F7F7F7", borderRadius: 16, padding: 16, marginTop: 12 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <View style={{ flex: 1, paddingRight: 12 }}>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.textPrimary }}>Preset unit selection</Text>
-              <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 4 }}>Offer fixed pack sizes with individual prices</Text>
-            </View>
-            <Switch value={presetUnitsEnabled} onValueChange={setPresetUnitsEnabled} trackColor={{ false: "#D1D1D6", true: "#34C759" }} />
-          </View>
-          {presetUnitsEnabled && (
-            <View style={{ marginTop: 14 }}>
-              <Text style={{ fontSize: 12, color: Colors.textSecondary, marginBottom: 10 }}>Stock above is measured in the base unit entered below. Each preset consumes its base quantity.</Text>
-              {presetUnits.map((option, index) => (
-                <View key={option.id} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8, gap: 6 }}>
-                  <TextInput style={{ flex: 1, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E5E5E5", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 10, color: "#111" }} placeholder="Label (e.g. 1 kg)" value={option.label} onChangeText={(value) => setPresetUnits((prev) => prev.map((item, i) => i === index ? { ...item, label: value } : item))} />
-                  <TextInput style={{ width: 76, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E5E5E5", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 10, color: "#111" }} placeholder="Base qty" keyboardType="decimal-pad" value={option.baseQuantity} onChangeText={(value) => setPresetUnits((prev) => prev.map((item, i) => i === index ? { ...item, baseQuantity: value } : item))} />
-                  <TextInput style={{ width: 76, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E5E5E5", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 10, color: "#111" }} placeholder="₹ Price" keyboardType="decimal-pad" value={option.price} onChangeText={(value) => setPresetUnits((prev) => prev.map((item, i) => i === index ? { ...item, price: value } : item))} />
-                  <TouchableOpacity onPress={() => setPresetUnits((prev) => prev.filter((_, i) => i !== index))} style={{ padding: 5 }}><Ionicons name="trash-outline" size={18} color={Colors.danger} /></TouchableOpacity>
-                </View>
-              ))}
-              <TouchableOpacity onPress={() => setPresetUnits((prev) => [...prev, { id: String(Date.now()), label: "", baseQuantity: "", price: "" }])} style={{ borderWidth: 1, borderStyle: "dashed", borderColor: "#999", borderRadius: 10, padding: 12, alignItems: "center", marginTop: 4 }}>
-                <Text style={{ color: Colors.textPrimary, fontWeight: "600" }}>+ Add preset size</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
         </Animated.View>
 
         {/* Additional Details */}
