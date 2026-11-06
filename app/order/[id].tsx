@@ -304,7 +304,30 @@ export default function OrderDetails() {
         return;
       }
 
-      if (status === "Accepted" && !order.stockDeducted) {
+      if (status === "Cancelled" && order.stockDeducted && !order.stockRestored) {
+        await runTransaction(db, async (transaction) => {
+          const orderRef = doc(db, "orders", id as string);
+          const orderSnapshot = await transaction.get(orderRef);
+          if (!orderSnapshot.exists()) throw new Error("Order no longer exists.");
+          const currentOrder: any = orderSnapshot.data();
+          if (currentOrder.stockRestored) return;
+          const requiredByProduct = new Map<string, number>();
+          (Array.isArray(currentOrder.items) ? currentOrder.items : []).forEach((item: any) => {
+            if (!item.productId) return;
+            const required = Number(item.baseQuantity || 1) * Number(item.quantity || 0);
+            requiredByProduct.set(item.productId, (requiredByProduct.get(item.productId) || 0) + required);
+          });
+          const productRefs = Array.from(requiredByProduct.keys()).map((productId) => doc(db, "products", productId));
+          const productSnapshots = await Promise.all(productRefs.map((productRef) => transaction.get(productRef)));
+          productSnapshots.forEach((snapshot, index) => {
+            if (snapshot.exists()) {
+              const required = requiredByProduct.get(snapshot.id) || 0;
+              transaction.update(productRefs[index], { stock: Number(snapshot.data().stock || 0) + required });
+            }
+          });
+          transaction.update(orderRef, { status, stockRestored: true, stockRestoredAt: new Date() });
+        });
+      } else if (status === "Accepted" && !order.stockDeducted) {
         await runTransaction(db, async (transaction) => {
           const orderRef = doc(db, "orders", id as string);
           const orderSnapshot = await transaction.get(orderRef);
