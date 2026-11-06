@@ -29,6 +29,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { db } from "../../firebase/config";
+import ThermalReceiptPrinter from "../../components/ThermalReceiptPrinter";
 
 const Colors = {
   background: "#FFFFFF",
@@ -597,6 +598,8 @@ export default function OrderDetails() {
             </View>
           ))}
         </InfoCard>
+
+        <ThermalReceiptPrinter order={order} />
 
         <InfoCard icon="wallet-outline" iconColor={Colors.primary} label="Bill Summary" delay={360}>
           <View style={styles.infoRow}>
