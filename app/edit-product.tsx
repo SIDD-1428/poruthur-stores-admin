@@ -268,9 +268,9 @@ export default function EditProductScreen() {
     }
 
     if (presetUnitsEnabled) {
-      const validPresets = presetUnits.filter((item) => item.label.trim() && Number(item.baseQuantity) > 0 && Number(item.price) >= 0);
-      if (validPresets.length === 0 || validPresets.length !== presetUnits.length) {
-        Alert.alert("Invalid preset units", "Add a label, positive base quantity and valid price for every preset.");
+      const validPresets = presetUnits.filter((item) => item.label.trim() && item.baseQuantity.trim() && Number(item.baseQuantity) > 0 && item.price.trim() && Number(item.price) >= 0);
+      if (!unit.trim() || validPresets.length === 0 || validPresets.length !== presetUnits.length) {
+        Alert.alert("Invalid preset units", "Enter a base unit and add a label, positive base quantity and price for every preset.");
         return;
       }
     }
