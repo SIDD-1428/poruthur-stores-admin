@@ -12,7 +12,7 @@ export const generateInvoiceHtml = (order: any) => {
     .map(
       (item: any) => `
       <tr>
-          <td>${item.name}</td>
+          <td>${item.name}${item.unit ? " (" + item.unit + ")" : ""}</td>
           <td style="text-align:center">${item.quantity}</td>
           <td style="text-align:right">₹${item.unitPrice ?? item.price}</td>
           <td style="text-align:right">
