@@ -263,7 +263,7 @@ export default function ThermalReceiptPrinter({ order }: Props) {
       await printer.println("ITEMS");
       await printer.bold(false);
       for (const item of items) {
-        const itemName = String(item.name ?? "Item");
+        const itemName = String(item.name ?? "Item") + (item.unit ? " (" + String(item.unit) + ")" : "");
         for (const line of wrapText(itemName, 30)) {
           await printer.println(line);
         }
