@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot, runTransaction, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -29,7 +29,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { db } from "../../firebase/config";
-import ThermalReceiptPrinter from "../../components/ThermalReceiptPrinter";
 import ThermalReceiptPrinter from "../../components/ThermalReceiptPrinter";
 
 const Colors = {
@@ -305,7 +304,36 @@ export default function OrderDetails() {
         return;
       }
 
-      await updateDoc(doc(db, "orders", id as string), { status });
+      if (status === "Accepted" && !order.stockDeducted) {
+        await runTransaction(db, async (transaction) => {
+          const orderRef = doc(db, "orders", id as string);
+          const orderSnapshot = await transaction.get(orderRef);
+          if (!orderSnapshot.exists()) throw new Error("Order no longer exists.");
+          const currentOrder: any = orderSnapshot.data();
+          if (currentOrder.stockDeducted) return;
+          const requiredByProduct = new Map<string, number>();
+          (Array.isArray(currentOrder.items) ? currentOrder.items : []).forEach((item: any) => {
+            if (!item.productId) return;
+            const required = Number(item.baseQuantity || 1) * Number(item.quantity || 0);
+            requiredByProduct.set(item.productId, (requiredByProduct.get(item.productId) || 0) + required);
+          });
+          const productRefs = Array.from(requiredByProduct.keys()).map((productId) => doc(db, "products", productId));
+          const productSnapshots = await Promise.all(productRefs.map((productRef) => transaction.get(productRef)));
+          productSnapshots.forEach((snapshot) => {
+            if (!snapshot.exists()) throw new Error("A product in this order no longer exists.");
+            const available = Number(snapshot.data().stock || 0);
+            const required = requiredByProduct.get(snapshot.id) || 0;
+            if (required > available) throw new Error(snapshot.data().name + " has only " + available + " " + (snapshot.data().unit || "units") + " left in stock.");
+          });
+          productSnapshots.forEach((snapshot, index) => {
+            const required = requiredByProduct.get(snapshot.id) || 0;
+            transaction.update(productRefs[index], { stock: Number(snapshot.data().stock || 0) - required });
+          });
+          transaction.update(orderRef, { status, stockDeducted: true, stockDeductedAt: new Date() });
+        });
+      } else {
+        await updateDoc(doc(db, "orders", id as string), { status });
+      }
 
       if (status === "Out For Delivery") {
         await navigateToCustomer();
