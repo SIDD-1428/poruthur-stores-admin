@@ -621,7 +621,7 @@ export default function OrderDetails() {
             >
               <View style={styles.itemLeft}>
                 <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemQty}>Qty: {item.quantity}</Text>
+                <Text style={styles.itemQty}>Qty: {item.quantity}{item.unit ? " · " + item.unit : ""}</Text>
               </View>
               <Text style={styles.itemPrice}>₹{item.unitPrice * item.quantity}</Text>
             </View>
