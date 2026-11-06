@@ -508,7 +508,7 @@ console.log(
           <Text style={styles.sectionTitle}>Inventory Details</Text>
           <InputField
             icon="layers-outline"
-            placeholder="Stock Quantity"
+            placeholder={presetUnitsEnabled ? "Stock Quantity (in " + (unit || "base units") + ")" : "Stock Quantity"}
             value={stock}
             onChangeText={setStock}
             keyboardType="numeric"
@@ -522,7 +522,7 @@ console.log(
           />
           <InputField
             icon="scale-outline"
-            placeholder="Unit (500g, 1kg, etc.)"
+            placeholder={presetUnitsEnabled ? "Base Unit (kg, g, piece, etc.)" : "Unit (500g, 1kg, etc.)"}
             value={unit}
             onChangeText={setUnit}
           />
