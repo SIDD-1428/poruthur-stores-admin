@@ -247,9 +247,6 @@ export default function ThermalReceiptPrinter({ order }: Props) {
       await printer.println(String(order.customerName ?? "N/A"));
       if (order.address?.phone) await printer.println(`Phone: ${order.address.phone}`);
       if (order.address?.address) {
-        wrapText(String(order.address.address)).forEach((line) => {
-          // Lines are sent sequentially below.
-        });
         for (const line of wrapText(String(order.address.address))) {
           await printer.println(line);
         }
