@@ -29,6 +29,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { db } from "../../firebase/config";
+import ThermalReceiptPrinter from "../../components/ThermalReceiptPrinter";
+import ThermalReceiptPrinter from "../../components/ThermalReceiptPrinter";
 
 const Colors = {
   background: "#FFFFFF",
@@ -617,6 +619,10 @@ export default function OrderDetails() {
             <Text style={styles.totalAmount}>₹{order.pricing?.grandTotal ?? order.total}</Text>
           </View>
         </InfoCard>
+
+        <ThermalReceiptPrinter order={order} />
+
+        <ThermalReceiptPrinter order={order} />
 
         <Animated.View entering={FadeInUp.delay(420)}>
           <TouchableOpacity style={styles.printBtn} onPress={()=> router.push({ pathname:"/printOrder", params:{id:order.id,},})}>
