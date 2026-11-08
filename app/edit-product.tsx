@@ -275,7 +275,7 @@ export default function EditProductScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         "Missing Information",
-        "Please fill all required fields:\n• Product Name\n• MRP (must be ≥ Selling Price)\n• Selling Price\n• Category"
+        "Please fill all required fields:\n• Product Name\n• MRP (must be ≥ Selling Price)\n• Selling Price\n• Category${productType === "branded" ? "\n• Brand" : ""}"
       );
       return;
     }
@@ -558,7 +558,7 @@ export default function EditProductScreen() {
           </View>
           {productType === "branded" && <>
             <Text style={styles.brandFieldLabel}>BRAND *</Text>
-            <TouchableOpacity style={styles.brandPicker} onPress={() => setBrandDropdownOpen(!brandDropdownOpen)}>
+            <TouchableOpacity style={styles.brandPicker} onPress={() => { loadBrands(); setBrandDropdownOpen(!brandDropdownOpen); }}>
               <Text style={[styles.brandPickerText, !brandId && styles.brandPickerPlaceholder]}>{brands.find((brand: any) => brand.id === brandId)?.name || "Select a brand"}</Text>
               <Ionicons name={brandDropdownOpen ? "chevron-up" : "chevron-down"} size={19} color={Colors.muted} />
             </TouchableOpacity>
