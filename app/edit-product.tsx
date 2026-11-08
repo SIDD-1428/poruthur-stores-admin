@@ -59,6 +59,8 @@ const Colors = {
 
 const InputField = ({
   icon,
+  label,
+  helper,
   placeholder,
   value,
   onChangeText,
@@ -68,6 +70,11 @@ const InputField = ({
   numberOfLines = 1,
 }: any) => (
   <Animated.View entering={FadeInDown.delay(50).springify()} style={styles.inputWrapper}>
+    <View style={styles.fieldHeading}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      {required && <Text style={styles.fieldRequired}>Required</Text>}
+    </View>
+    {!!helper && <Text style={styles.fieldHelper}>{helper}</Text>}
     <View style={styles.inputContainer}>
       <Ionicons name={icon} size={20} color={Colors.muted} style={styles.inputIcon} />
       <TextInput
@@ -80,11 +87,6 @@ const InputField = ({
         multiline={multiline}
         numberOfLines={numberOfLines}
       />
-      {required && !value && value !== 0 && (
-        <View style={styles.requiredBadge}>
-          <Text style={styles.requiredText}>Required</Text>
-        </View>
-      )}
     </View>
   </Animated.View>
 );
@@ -352,7 +354,7 @@ export default function EditProductScreen() {
         {/* Product Image Section */}
         <Animated.View entering={ZoomIn.delay(100)} style={styles.imageSection}>
           <Text style={styles.sectionTitle}>Product Image</Text>
-          <Text style={styles.sectionSubtitle}>Update product photo</Text>
+          <Text style={styles.sectionSubtitle}>This is the photo customers will see. Replace it using your gallery or camera, or remove it.</Text>
 
           {image ? (
             <View style={styles.imagePreviewContainer}>
@@ -414,6 +416,7 @@ export default function EditProductScreen() {
           <Text style={styles.sectionTitle}>Basic Information</Text>
           <InputField
             icon="pricetag-outline"
+            label="Product name"
             placeholder="Product Name *"
             value={name}
             onChangeText={setName}
@@ -421,6 +424,7 @@ export default function EditProductScreen() {
           />
           <InputField
             icon="pricetag-outline"
+            label="MRP (Maximum Retail Price)"
             placeholder="MRP *"
             value={mrp}
             onChangeText={setMrp}
@@ -429,6 +433,7 @@ export default function EditProductScreen() {
           />
           <InputField
             icon="currency-inr"
+            label="Selling price"
             placeholder="Selling Price *"
             value={price}
             onChangeText={setPrice}
@@ -437,7 +442,7 @@ export default function EditProductScreen() {
           />
           
           {/* Category Dropdown */}
-          <Text style={styles.sectionTitle}>Category *</Text>
+          <Text style={styles.fieldLabelStandalone}>Product category *</Text>
           
           {!showNewCategory ? (
             <>
@@ -449,7 +454,7 @@ export default function EditProductScreen() {
                 }}
               >
                 <Text style={[styles.dropdownText, category ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder]}>
-                  {category || "Select Category"}
+                  {category || "Choose a category"}
                 </Text>
                 <Ionicons
                   name={dropdownOpen ? "chevron-up" : "chevron-down"}
@@ -503,7 +508,9 @@ export default function EditProductScreen() {
             <Animated.View entering={FadeInDown.springify()} style={styles.newCategoryContainer}>
               <InputField
                 icon="add-circle-outline"
-                placeholder="Enter new category name"
+                label="New category name"
+            helper="Create a category and assign this product to it."
+            placeholder="Enter new category name"
                 value={newCategory}
                 onChangeText={setNewCategory}
               />
@@ -556,7 +563,8 @@ export default function EditProductScreen() {
             </TouchableOpacity>
           </View>
           {productType === "branded" && <>
-            <Text style={styles.brandFieldLabel}>BRAND *</Text>
+            <Text style={styles.fieldLabelStandalone}>Brand *</Text>
+            <Text style={styles.fieldHelperStandalone}>Select the brand associated with this product. This is an internal catalogue link.</Text>
             <TouchableOpacity style={styles.brandPicker} onPress={() => { loadBrands(); setBrandDropdownOpen(!brandDropdownOpen); }}>
               <Text style={[styles.brandPickerText, !brandId && styles.brandPickerPlaceholder]}>{brands.find((brand: any) => brand.id === brandId)?.name || "Select a brand"}</Text>
               <Ionicons name={brandDropdownOpen ? "chevron-up" : "chevron-down"} size={19} color={Colors.muted} />
@@ -579,6 +587,8 @@ export default function EditProductScreen() {
           <Text style={styles.sectionTitle}>Inventory Details</Text>
           <InputField
             icon="layers-outline"
+            label="Available stock"
+            helper="How many units are currently available in inventory."
             placeholder="Stock Quantity"
             value={stock}
             onChangeText={setStock}
@@ -586,6 +596,8 @@ export default function EditProductScreen() {
           />
           <InputField
             icon="alert-circle-outline"
+            label="Maximum order quantity"
+            helper="Maximum units one customer can buy in a single order. Enter 0 for no limit."
             placeholder="Max Order Quantity (0 = No Limit)"
             value={maxOrderQty}
             onChangeText={setMaxOrderQty}
@@ -593,6 +605,8 @@ export default function EditProductScreen() {
           />
           <InputField
             icon="scale-outline"
+            label="Product unit / size"
+            helper="Describe the pack size or measurement, e.g. 500 g, 1 kg, 1 litre, or 1 pack."
             placeholder="Unit (500g, 1kg, etc.)"
             value={unit}
             onChangeText={setUnit}
@@ -604,6 +618,8 @@ export default function EditProductScreen() {
           <Text style={styles.sectionTitle}>Additional Details</Text>
           <InputField
             icon="document-text-outline"
+            label="Product description"
+            helper="Short details about the product. This can be shown on the customer product page."
             placeholder="Description"
             value={protext}
             onChangeText={setProtext}
@@ -612,6 +628,8 @@ export default function EditProductScreen() {
           />
           <InputField
             icon="star-outline"
+            label="Product rating"
+            helper="Optional rating from 0 to 5. Leave blank if you do not want to set one."
             placeholder="Rating (0-5)"
             value={rating}
             onChangeText={setRating}
@@ -624,6 +642,8 @@ export default function EditProductScreen() {
           <Text style={styles.sectionTitle}>Advanced</Text>
           <InputField
             icon="link-outline"
+            label="Image URL"
+            helper="Paste a publicly accessible image URL. Leave blank when you upload an image above."
             placeholder="Image URL (Optional - leave empty if using upload)"
             value={image}
             onChangeText={setImage}
@@ -663,6 +683,13 @@ export default function EditProductScreen() {
 }
 
 const styles = StyleSheet.create({
+  fieldHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 5 },
+  fieldLabel: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
+  fieldRequired: { fontSize: 10, fontWeight: "700", color: Colors.danger, textTransform: "uppercase", letterSpacing: 0.5 },
+  fieldHelper: { fontSize: 11, color: Colors.muted, lineHeight: 16, marginBottom: 7 },
+  fieldLabelStandalone: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary, marginTop: 4, marginBottom: 5 },
+  fieldHelperStandalone: { fontSize: 11, color: Colors.muted, lineHeight: 16, marginBottom: 9 },
+
   classificationHint: { fontSize: 12, color: Colors.muted, marginBottom: 10, lineHeight: 18 },
   classificationRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
   classificationOption: { flex: 1, minHeight: 48, borderWidth: 1, borderColor: Colors.separator, borderRadius: 13, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.surface },
