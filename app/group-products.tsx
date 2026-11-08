@@ -429,36 +429,46 @@ export default function GroupProductsScreen() {
               <Text style={styles.headerSubtitle}>Select related individual products</Text>
             </View>
           </LinearGradient>
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalContent}>
-            <Text style={styles.fieldLabel}>GROUP NAME</Text>
-            <TextInput
-              value={groupName}
-              onChangeText={setGroupName}
-              placeholder="e.g. Rice"
-              placeholderTextColor={Colors.muted}
-              style={styles.nameInput}
-              maxLength={60}
-            />
-            <View style={styles.selectionHeading}>
-              <View>
-                <Text style={styles.sectionTitle}>Choose products</Text>
-                <Text style={styles.stateText}>{selectedIds.length} selected · Select at least 2</Text>
-              </View>
-            </View>
-            <View style={styles.searchBox}>
-              <Ionicons name="search-outline" size={19} color={Colors.muted} />
+          <View style={styles.modalBody}>
+            <View style={styles.modalTopContent}>
+              <Text style={styles.fieldLabel}>GROUP NAME</Text>
               <TextInput
-                value={productSearch}
-                onChangeText={setProductSearch}
-                placeholder="Search by name, unit or category..."
+                value={groupName}
+                onChangeText={setGroupName}
+                placeholder="e.g. Rice"
                 placeholderTextColor={Colors.muted}
-                style={styles.searchInput}
+                style={styles.nameInput}
+                maxLength={60}
               />
+              <View style={styles.selectionHeading}>
+                <View>
+                  <Text style={styles.sectionTitle}>Choose products</Text>
+                  <Text style={styles.stateText}>{selectedIds.length} selected · Select at least 2</Text>
+                </View>
+              </View>
+              <View style={styles.searchBox}>
+                <Ionicons name="search-outline" size={19} color={Colors.muted} />
+                <TextInput
+                  value={productSearch}
+                  onChangeText={setProductSearch}
+                  placeholder="Search by name, unit or category..."
+                  placeholderTextColor={Colors.muted}
+                  style={styles.searchInput}
+                />
+              </View>
+              <Text style={styles.standardHint}>Tap the checkbox to include a product. For selected products, choose which one is the standard option.</Text>
             </View>
-            <Text style={styles.standardHint}>Tap the checkbox to include a product. For selected products, choose which one is the standard option.</Text>
-            {availableProducts.length ? availableProducts.map(renderProductChoice) : (
-              <Text style={styles.noProducts}>No available products match this search.</Text>
-            )}
+            <View style={styles.productListContainer}>
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator
+                contentContainerStyle={styles.productListContent}
+              >
+                {availableProducts.length ? availableProducts.map(renderProductChoice) : (
+                  <Text style={styles.noProducts}>No available products match this search.</Text>
+                )}
+              </ScrollView>
+            </View>
             <View style={styles.modalFooter}>
               <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)} disabled={saving}>
                 <Text style={styles.cancelText}>Cancel</Text>
@@ -467,8 +477,7 @@ export default function GroupProductsScreen() {
                 {saving ? <ActivityIndicator color="#FFFFFF" /> : <><Ionicons name="checkmark" size={19} color="#FFFFFF" /><Text style={styles.saveText}>{editingGroupId ? "Save Changes" : "Create Group"}</Text></>}
               </TouchableOpacity>
             </View>
-            <View style={{ height: 28 }} />
-          </ScrollView>
+          </View>
         </View>
       </Modal>
     </View>
@@ -510,7 +519,10 @@ const styles = StyleSheet.create({
   emptyAddText: { color: "#FFFFFF", fontSize: 13, fontWeight: "600" },
   modalContainer: { flex: 1, backgroundColor: Colors.background },
   modalHeader: { paddingTop: Platform.OS === "ios" ? 52 : 40, paddingBottom: 18, paddingHorizontal: 18, flexDirection: "row", alignItems: "center", gap: 12 },
-  modalContent: { paddingHorizontal: 18, paddingTop: 22 },
+  modalBody: { flex: 1, paddingHorizontal: 18, paddingTop: 18, paddingBottom: Platform.OS === "ios" ? 24 : 16 },
+  modalTopContent: { flexShrink: 0 },
+  productListContainer: { flex: 1, minHeight: 120, borderWidth: 1, borderColor: Colors.border, borderRadius: 14, backgroundColor: "#FAFAFA", padding: 8, overflow: "hidden" },
+  productListContent: { paddingBottom: 4 },
   fieldLabel: { fontSize: 11, letterSpacing: 1, color: Colors.muted, fontWeight: "700", marginBottom: 8 },
   nameInput: { borderWidth: 1, borderColor: Colors.border, borderRadius: 13, paddingHorizontal: 14, paddingVertical: 14, color: Colors.text, fontSize: 15, marginBottom: 24 },
   selectionHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
@@ -527,7 +539,7 @@ const styles = StyleSheet.create({
   standardText: { fontSize: 9, color: Colors.muted },
   standardTextActive: { color: Colors.success, fontWeight: "700" },
   noProducts: { color: Colors.muted, textAlign: "center", paddingVertical: 28, fontSize: 13 },
-  modalFooter: { flexDirection: "row", gap: 10, marginTop: 20 },
+  modalFooter: { flexDirection: "row", gap: 10, marginTop: 14, paddingTop: 12, backgroundColor: Colors.background },
   cancelButton: { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 13, paddingVertical: 14, alignItems: "center" },
   cancelText: { fontSize: 14, fontWeight: "600", color: Colors.secondary },
   saveButton: { flex: 1.5, flexDirection: "row", gap: 6, backgroundColor: Colors.primary, borderRadius: 13, paddingVertical: 14, alignItems: "center", justifyContent: "center" },
