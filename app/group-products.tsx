@@ -112,7 +112,7 @@ export default function GroupProductsScreen() {
   );
 
   const productMap = useMemo(
-    () => new Map(products.map((product) => [product.id, product])),
+    () => new Map(products.map((product) => [product.id, product] as const)),
     [products]
   );
 
@@ -157,7 +157,7 @@ export default function GroupProductsScreen() {
   const openEdit = (group: ProductGroup) => {
     setEditingGroupId(group.id);
     setGroupName(group.name);
-    setSelectedIds(group.productIds || []);
+    setSelectedIds((group.productIds || []).filter((id) => products.some((product) => product.id === id)));
     setStandardId(group.standardProductId);
     setProductSearch("");
     setModalVisible(true);
