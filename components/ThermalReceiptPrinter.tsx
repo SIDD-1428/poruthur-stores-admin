@@ -276,27 +276,27 @@ export default function ThermalReceiptPrinter({ order }: Props) {
         console.warn("Unable to fetch store payment QR", qrError);
       }
 
-      await printer.alignCenter();
+      await printer.alignLeft();
       await printer.bold(true);
       await printer.setSize("double");
-      await printer.println("BONMART");
+      await printer.print("BONMART");
       await printer.setSize("normal");
       await printer.bold(false);
-      await printer.println("Shop Good, Live Good");
-      await printer.println("Abbigere, Bengaluru");
-      await printer.println("+91 90358 13611");
       if (paymentQrUrl) {
         try {
-          await printer.alignRight();
           await printQrBitmap(printer, paymentQrUrl);
           await printer.println("");
         } catch (qrError) {
           console.warn("Unable to print payment QR", qrError);
-          await printer.alignLeft();
-          await printer.println("Payment QR unavailable");
+          await printer.println("");
+          await printer.println("[Payment QR unavailable]");
         }
+      } else {
+        await printer.println("");
       }
-      await printer.alignLeft();
+      await printer.println("Shop Good, Live Good");
+      await printer.println("Abbigere, Bengaluru");
+      await printer.println("+91 90358 13611");
       await printer.separator("=");
 
       await printer.alignLeft();
