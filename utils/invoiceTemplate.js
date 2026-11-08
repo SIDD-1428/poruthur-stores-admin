@@ -164,7 +164,7 @@ ${items}
 </div>
 
 <table class="summary">
-${Number(order.pricing?.savings ?? order.items.reduce((sum, item) => sum + Number(item.savings ?? Math.max(0, Number(item.mrp ?? item.unitPrice ?? item.price) - Number(item.unitPrice ?? item.price)) * Number(item.quantity ?? 0)), 0)) > 0 ? `<tr style="color:#18864B;font-weight:bold"><td>You Saved</td><td align="right">₹${Number(order.pricing?.savings ?? order.items.reduce((sum, item) => sum + Number(item.savings ?? Math.max(0, Number(item.mrp ?? item.unitPrice ?? item.price) - Number(item.unitPrice ?? item.price)) * Number(item.quantity ?? 0)), 0)).toFixed(2)}</td></tr>` : ""}
+
 <tr>
 <td>Subtotal</td>
 <td align="right">₹${order.pricing?.subtotal ?? order.total}</td>
@@ -183,6 +183,7 @@ ${order.pricing?.deliveryCharge === 0 ? "FREE" : `₹${order.pricing?.deliveryCh
 <td>Grand Total</td>
 <td align="right">₹${order.pricing?.grandTotal ?? order.total}</td>
 </tr>
+${Number(order.pricing?.savings ?? order.items.reduce((sum, item) => sum + Number(item.savings ?? Math.max(0, Number(item.mrp ?? item.unitPrice ?? item.price) - Number(item.unitPrice ?? item.price)) * Number(item.quantity ?? 0)), 0)) > 0 ? `<tr style="color:#18864B;font-weight:bold"><td>YOUR SAVINGS</td><td align="right">₹${Number(order.pricing?.savings ?? order.items.reduce((sum, item) => sum + Number(item.savings ?? Math.max(0, Number(item.mrp ?? item.unitPrice ?? item.price) - Number(item.unitPrice ?? item.price)) * Number(item.quantity ?? 0)), 0)).toFixed(2)}</td></tr>` : ""}
 </table>
 
 <div class="section">
