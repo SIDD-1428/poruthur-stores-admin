@@ -380,7 +380,7 @@ Team BonMart`;
 
   const notifyViaWhatsApp = async () => {
     const rawPhone = order?.customerPhone || order?.address?.phone || "";
-    let phone = String(rawPhone).replace(/\\D/g, "");
+    let phone = String(rawPhone).replace(/\D/g, "");
 
     if (phone.length === 10) phone = `91${phone}`;
     if (phone.length < 10) {
