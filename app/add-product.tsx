@@ -3,6 +3,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
+import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { addDoc, collection, getDocs, serverTimestamp } from "firebase/firestore";
@@ -555,35 +556,51 @@ console.log(
           </>}
         </Animated.View>
 
-        {/* Inventory Details */}
-        <Animated.View entering={FadeInUp.delay(200)}>
-          <Text style={styles.sectionTitle}>Inventory Details</Text>
-          <InputField
-            icon="layers-outline"
-            label="Available stock"
-            helper="How many units are currently available in inventory."
-            placeholder="Stock Quantity"
-            value={stock}
-            onChangeText={setStock}
-            keyboardType="numeric"
-          />
-          <InputField
-            icon="alert-circle-outline"
-            label="Maximum order quantity"
-            helper="Maximum units one customer can buy in a single order. Enter 0 for no limit."
-            placeholder="Max Order Quantity (0 = No Limit)"
-            value={maxOrderQty}
-            onChangeText={setMaxOrderQty}
-            keyboardType="numeric"
-          />
-          <InputField
-            icon="scale-outline"
-            label="Product unit / size"
-            helper="Describe the pack size or measurement, e.g. 500 g, 1 kg, 1 litre, or 1 pack."
-            placeholder="Unit (500g, 1kg, etc.)"
-            value={unit}
-            onChangeText={setUnit}
-          />
+        {/* Inventory Details — frosted glass container */}
+        <Animated.View entering={FadeInUp.delay(200)} style={styles.inventoryGlassWrap}>
+          <BlurView intensity={48} tint="light" style={styles.inventoryGlass}>
+            <LinearGradient
+              colors={["rgba(255,255,255,0.82)", "rgba(245,247,250,0.58)", "rgba(255,255,255,0.72)"]}
+              locations={[0, 0.52, 1]}
+              style={styles.inventoryGlassSheen}
+            >
+              <View style={styles.inventoryGlassHeader}>
+                <View style={styles.inventoryGlassIcon}>
+                  <Ionicons name="cube-outline" size={20} color={Colors.textPrimary} />
+                </View>
+                <View style={styles.inventoryGlassHeading}>
+                  <Text style={styles.inventoryGlassTitle}>Inventory Details</Text>
+                  <Text style={styles.inventoryGlassSubtitle}>Manage stock, order limits and product size</Text>
+                </View>
+              </View>
+              <InputField
+                icon="layers-outline"
+                label="Available stock"
+                helper="How many units are currently available in inventory."
+                placeholder="Stock Quantity"
+                value={stock}
+                onChangeText={setStock}
+                keyboardType="numeric"
+              />
+              <InputField
+                icon="alert-circle-outline"
+                label="Maximum order quantity"
+                helper="Maximum units one customer can buy in a single order. Enter 0 for no limit."
+                placeholder="Max Order Quantity (0 = No Limit)"
+                value={maxOrderQty}
+                onChangeText={setMaxOrderQty}
+                keyboardType="numeric"
+              />
+              <InputField
+                icon="scale-outline"
+                label="Product unit / size"
+                helper="Describe the pack size or measurement, e.g. 500 g, 1 kg, 1 litre, or 1 pack."
+                placeholder="Unit (500g, 1kg, etc.)"
+                value={unit}
+                onChangeText={setUnit}
+              />
+            </LinearGradient>
+          </BlurView>
         </Animated.View>
 
         {/* Additional Details */}
@@ -832,6 +849,64 @@ const styles = StyleSheet.create({
   uploadingText: {
     fontSize: 12,
     color: Colors.primary,
+  },
+
+  // Frosted liquid-glass inventory panel
+  inventoryGlassWrap: {
+    marginTop: 4,
+    marginBottom: 20,
+    borderRadius: 26,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 22,
+    elevation: 7,
+  },
+  inventoryGlass: {
+    borderRadius: 26,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.92)",
+    backgroundColor: "rgba(255,255,255,0.68)",
+  },
+  inventoryGlassSheen: {
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.48)",
+    borderRadius: 26,
+  },
+  inventoryGlassHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 18,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(100,116,139,0.14)",
+  },
+  inventoryGlassIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.76)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.95)",
+  },
+  inventoryGlassHeading: {
+    flex: 1,
+  },
+  inventoryGlassTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    letterSpacing: -0.3,
+  },
+  inventoryGlassSubtitle: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 3,
   },
 
   // Input Fields
