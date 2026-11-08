@@ -353,6 +353,8 @@ export default function EditProductScreen() {
       </LinearGradient>
 
       <ScrollView
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}
@@ -503,20 +505,28 @@ export default function EditProductScreen() {
                     <View style={styles.dropdownDivider} />
                   )}
                   
-                  {categories.map((item, index) => (
-                    <TouchableOpacity
-                      key={`${item}-${index}`}
-                      style={styles.dropdownItem}
-                      onPress={() => {
-                        setCategory(item);
-                        setDropdownOpen(false);
-                        Haptics.selectionAsync();
-                      }}
-                    >
-                      <Ionicons name="folder-outline" size={18} color={Colors.muted} />
-                      <Text style={styles.dropdownItemText}>{item}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  <ScrollView
+                    style={styles.categoryList}
+                    nestedScrollEnabled
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator
+                  >
+                    {categories.map((item, index) => (
+                      <TouchableOpacity
+                        key={`${item}-${index}`}
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          setCategory(item);
+                          setDropdownOpen(false);
+                          Haptics.selectionAsync();
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="folder-outline" size={18} color={Colors.muted} />
+                        <Text style={styles.dropdownItemText}>{item}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
 
                   {categories.length === 0 && (
                     <Text style={styles.dropdownEmptyText}>No categories yet. Tap &quot;Add New Category&quot; to create one.</Text>
@@ -1379,6 +1389,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: 12,
     maxHeight: 250,
+  },
+  categoryList: {
+    maxHeight: 190,
+    flexGrow: 0,
   },
   dropdownItem: {
     flexDirection: "row",
