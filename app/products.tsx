@@ -159,8 +159,16 @@ export default function ProductsScreen() {
               </Text>
               <View style={styles.priceRow}>
                 <Text style={styles.productPrice}>₹{item.price}</Text>
+                {Number(item.mrp ?? item.price) > Number(item.price) ? (
+                  <Text style={styles.productMrp}>₹{item.mrp}</Text>
+                ) : null}
                 <Text style={styles.productUnit}>{item.unit || "unit"}</Text>
               </View>
+              {Number(item.mrp ?? item.price) > Number(item.price) ? (
+                <Text style={styles.productSavings}>
+                  Save ₹{(Number(item.mrp) - Number(item.price)).toFixed(2)} per unit
+                </Text>
+              ) : null}
             </View>
 
             <View style={styles.productRight}>
@@ -499,6 +507,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.textPrimary,
   },
+  productMrp: { fontSize: 12, color: Colors.muted, textDecorationLine: "line-through" },
+  productSavings: { fontSize: 11, color: Colors.success, fontWeight: "600", marginTop: 2 },
   productUnit: {
     fontSize: 11,
     color: Colors.muted,
