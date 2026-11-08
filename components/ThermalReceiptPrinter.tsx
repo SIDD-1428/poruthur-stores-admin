@@ -447,9 +447,6 @@ const productUnits = new Map<string, string>(productUnitEntries);
   const quantity = Number(item.quantity ?? 0);
   const unitPrice = Number(item.unitPrice ?? item.price ?? 0);
   const lineTotal = Number(item.totalPrice ?? unitPrice * quantity);
-  const mrp = Number(item.mrp ?? unitPrice);
-  const itemSavings = Math.max(0, mrp - unitPrice) * quantity;
-
   const productId = String(item.productId ?? "").trim();
 
   // Prefer the unit saved in the order; otherwise use Firestore product data.
@@ -468,10 +465,6 @@ const productUnits = new Map<string, string>(productUnitEntries);
       money(lineTotal)
     )
   );
-        if (mrp > unitPrice) {
-          await printer.println(`  MRP: ${money(mrp)}  Selling: ${money(unitPrice)}`);
-          await printer.println(`  You saved: ${money(itemSavings)} (${quantity} item${quantity === 1 ? "" : "s"})`);
-        }
         for (const continuation of itemLines.slice(1)) {
           await printer.println(tableRow(continuation, "", "", ""));
         }
