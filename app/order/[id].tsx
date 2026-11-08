@@ -493,78 +493,78 @@ Team BonMart`;
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Animated.View
-  entering={FadeInDown.delay(40).springify()}
-  style={styles.header}
->
-  {/* Top row: Back button and order details */}
-  <View style={styles.headerTopRow}>
-    <TouchableOpacity
-      onPress={() => router.back()}
-      style={styles.backBtn}
-    >
-      <Ionicons name="chevron-back" size={22} color={Colors.primary} />
-    </TouchableOpacity>
-
-    <View style={styles.headerCenter}>
-      <Text style={styles.title}>Order Details</Text>
-      <Text style={styles.orderId}>
-        #{order.id.slice(0, 8).toUpperCase()}
-      </Text>
-    </View>
-  </View>
-
-  {/* Bottom row: Status and payment */}
-  <View style={styles.headerMetaRow}>
-    <View
-      style={[
-        styles.statusPill,
-        {
-          backgroundColor: statusColor + "15",
-          borderColor: statusColor + "40",
-        },
-      ]}
-    >
-      <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-      <Text style={[styles.statusPillText, { color: statusColor }]}>
-        {order.status}
-      </Text>
-    </View>
-
-    <View
-      style={[
-        styles.paymentBadge,
-        order.payment?.method === "QR Payment"
-          ? styles.qrPaymentBadge
-          : styles.codPaymentBadge,
-      ]}
-    >
-      <Ionicons
-        name={
-          order.payment?.method === "QR Payment"
-            ? "qr-code-outline"
-            : "cash-outline"
-        }
-        size={13}
-        color={order.payment?.method === "QR Payment" ? "#5856D6" : "#34C759"}
-      />
-      <Text
-        style={[
-          styles.paymentBadgeText,
-          {
-            color:
-              order.payment?.method === "QR Payment"
-                ? "#5856D6"
-                : "#34C759",
-          },
-        ]}
+        entering={FadeInDown.delay(40).springify()}
+        style={styles.header}
       >
-        {order.payment?.method === "QR Payment"
-          ? "QR Payment"
-          : "Cash on Delivery"}
-      </Text>
-    </View>
-  </View>
-</Animated.View>
+        {/* Top row: Back button and order details */}
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+          >
+            <Ionicons name="chevron-back" size={22} color={Colors.primary} />
+          </TouchableOpacity>
+
+          <View style={styles.headerCenter}>
+            <Text style={styles.title}>Order Details</Text>
+            <Text style={styles.orderId}>
+              #{order.id.slice(0, 8).toUpperCase()}
+            </Text>
+          </View>
+        </View>
+
+        {/* Bottom row: Status and payment */}
+        <View style={styles.headerMetaRow}>
+          <View
+            style={[
+              styles.statusPill,
+              {
+                backgroundColor: statusColor + "15",
+                borderColor: statusColor + "40",
+              },
+            ]}
+          >
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <Text style={[styles.statusPillText, { color: statusColor }]}>
+              {order.status}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.paymentBadge,
+              order.payment?.method === "QR Payment"
+                ? styles.qrPaymentBadge
+                : styles.codPaymentBadge,
+            ]}
+          >
+            <Ionicons
+              name={
+                order.payment?.method === "QR Payment"
+                  ? "qr-code-outline"
+                  : "cash-outline"
+              }
+              size={13}
+              color={order.payment?.method === "QR Payment" ? "#5856D6" : "#34C759"}
+            />
+            <Text
+              style={[
+                styles.paymentBadgeText,
+                {
+                  color:
+                    order.payment?.method === "QR Payment"
+                      ? "#5856D6"
+                      : "#34C759",
+                },
+              ]}
+            >
+              {order.payment?.method === "QR Payment"
+                ? "QR Payment"
+                : "Cash on Delivery"}
+            </Text>
+          </View>
+        </View>
+      </Animated.View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <Animated.View entering={FadeInDown.delay(100).springify().damping(18)} style={styles.stepperCard}>
@@ -645,20 +645,43 @@ Team BonMart`;
         </Animated.View>
 
         {isCancelled && order.cancellationReason ? (
-          <InfoCard icon="alert-circle-outline" iconColor={Colors.danger} label="Cancellation & Customer Notification" delay={140}>
-            <Text style={styles.rejectionReasonLabel}>Reason recorded</Text>
-            <Text style={styles.rejectionReasonText}>{order.cancellationReason}</Text>
-            <Text style={styles.notificationHint}>
-              Open a pre-filled message to notify the customer. Review it and press Send in the selected app.
-            </Text>
-            <TouchableOpacity style={styles.whatsappNotifyBtn} onPress={notifyViaWhatsApp} activeOpacity={0.85}>
-              <Ionicons name="logo-whatsapp" size={19} color="#FFFFFF" />
-              <Text style={styles.notifyButtonText}>Notify via WhatsApp</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.emailNotifyBtn} onPress={notifyViaEmail} activeOpacity={0.85}>
-              <Ionicons name="mail-outline" size={19} color={Colors.primary} />
-              <Text style={styles.emailNotifyButtonText}>Notify via Email</Text>
-            </TouchableOpacity>
+          <InfoCard
+            icon="alert-circle-outline"
+            iconColor={Colors.danger}
+            label="Customer Notification"
+            delay={140}
+          >
+            <View style={styles.cancelBody}>
+              <View style={styles.cancelReasonBlock}>
+                <Text style={styles.rejectionReasonLabel}>Reason recorded</Text>
+                <Text style={styles.rejectionReasonText}>{order.cancellationReason}</Text>
+              </View>
+
+              <Text style={styles.notificationHint}>
+                Open a pre-filled message to notify the customer. Review it and press
+                Send in the selected app.
+              </Text>
+
+              <View style={styles.notifyBtnGroup}>
+                <TouchableOpacity
+                  style={styles.whatsappNotifyBtn}
+                  onPress={notifyViaWhatsApp}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="logo-whatsapp" size={19} color="#FFFFFF" />
+                  <Text style={styles.notifyButtonText}>Notify via WhatsApp</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.emailNotifyBtn}
+                  onPress={notifyViaEmail}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="mail-outline" size={19} color={Colors.primary} />
+                  <Text style={styles.emailNotifyButtonText}>Notify via Email</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </InfoCard>
         ) : null}
 
@@ -762,8 +785,6 @@ Team BonMart`;
           </View>
         </InfoCard>
 
-    
-
         <ThermalReceiptPrinter order={order} />
 
         <Animated.View entering={FadeInUp.delay(420)}>
@@ -780,213 +801,230 @@ Team BonMart`;
         <View style={{ height: 40 }} />
       </ScrollView>
 
-     <Modal
-  visible={showRejectModal}
-  transparent
-  animationType="slide"
-  onRequestClose={() => {
-    if (!isRejecting) {
-      setShowRejectModal(false);
-      setRejectionReason("");
-    }
-  }}
->
-  <KeyboardAvoidingView
-    style={{ flex: 1 }}
-    behavior={Platform.OS === "ios" ? "padding" : "height"}
-  >
-    <View style={styles.rejectModalOverlay}>
-      <View style={[styles.rejectModalCard, { paddingBottom: Math.max(insets.bottom, 24) }]}>
-        <View style={styles.rejectModalHandle} />
-        <Text style={styles.rejectModalTitle}>Reject this order?</Text>
-        <Text style={styles.rejectModalDescription}>
-          Enter a clear reason. This will be saved with the order, and you can notify the customer through WhatsApp and Email.
-        </Text>
-
-        <TextInput
-          value={rejectionReason}
-          onChangeText={setRejectionReason}
-          placeholder="Enter reason for rejection..."
-          placeholderTextColor={Colors.muted}
-          multiline
-          maxLength={500}
-          textAlignVertical="top"
-          editable={!isRejecting}
-          style={styles.rejectionInput}
-        />
-        <Text style={styles.characterCount}>{rejectionReason.length}/500</Text>
-
-        <View style={styles.messagePreview}>
-          <Text style={styles.messagePreviewTitle}>MESSAGE PREVIEW</Text>
-          <Text style={styles.messagePreviewText}>
-            {rejectionReason.trim()
-              ? getCancellationMessage()
-              : "Your message preview will appear here once you enter a reason."}
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.confirmRejectBtn, (!rejectionReason.trim() || isRejecting) && styles.disabledRejectBtn]}
-          onPress={confirmRejection}
-          disabled={!rejectionReason.trim() || isRejecting}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="close-circle-outline" size={19} color="#FFFFFF" />
-          <Text style={styles.confirmRejectText}>
-            {isRejecting ? "Cancelling order..." : "Confirm Rejection"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.keepOrderBtn}
-          onPress={() => {
+      <Modal
+        visible={showRejectModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          if (!isRejecting) {
             setShowRejectModal(false);
             setRejectionReason("");
-          }}
-          disabled={isRejecting}
-        >
-          <Text style={styles.keepOrderText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </KeyboardAvoidingView>
-</Modal>
-
-     <Modal
-  visible={showPinModal}
-  transparent
-  animationType="slide"
-  onRequestClose={() => setShowPinModal(false)}
->
-  <KeyboardAvoidingView
-    style={{ flex: 1 }}
-    behavior={Platform.OS === "ios" ? "padding" : "height"}
-  >
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: "rgba(0,0,0,0.4)",
-        justifyContent: "flex-end",
-      }}
-    >
-      <View
-        style={{
-          backgroundColor: "#fff",
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-          padding: 24,
-          paddingBottom: Math.max(insets.bottom, 24),
+          }
         }}
       >
-        {/* Drag Handle */}
-        <View
-          style={{
-            alignSelf: "center",
-            width: 45,
-            height: 5,
-            borderRadius: 5,
-            backgroundColor: "#DDD",
-            marginBottom: 20,
-          }}
-        />
-
-        {/* Title */}
-        <Text
-          style={{
-            fontSize: 22,
-            fontWeight: "700",
-            textAlign: "center",
-          }}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          Verify Delivery
-        </Text>
+          <View style={styles.rejectModalOverlay}>
+            <View style={[styles.rejectModalCard, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+              <View style={styles.rejectModalHandle} />
 
-        {/* Description */}
-        <Text
-          style={{
-            marginTop: 8,
-            textAlign: "center",
-            color: "#666",
-            lineHeight: 22,
-          }}
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.rejectModalScrollContent}
+              >
+                <Text style={styles.rejectModalTitle}>Reject this order?</Text>
+                <Text style={styles.rejectModalDescription}>
+                  Enter a clear reason. This will be saved with the order, and you can
+                  notify the customer through WhatsApp and Email.
+                </Text>
+
+                <TextInput
+                  value={rejectionReason}
+                  onChangeText={setRejectionReason}
+                  placeholder="Enter reason for rejection..."
+                  placeholderTextColor={Colors.muted}
+                  multiline
+                  maxLength={500}
+                  textAlignVertical="top"
+                  editable={!isRejecting}
+                  style={styles.rejectionInput}
+                />
+                <Text style={styles.characterCount}>{rejectionReason.length}/500</Text>
+
+                <View style={styles.messagePreview}>
+                  <Text style={styles.messagePreviewTitle}>MESSAGE PREVIEW</Text>
+                  <ScrollView
+                    style={styles.messagePreviewScroll}
+                    showsVerticalScrollIndicator={false}
+                    nestedScrollEnabled
+                  >
+                    <Text style={styles.messagePreviewText}>
+                      {rejectionReason.trim()
+                        ? getCancellationMessage()
+                        : "Your message preview will appear here once you enter a reason."}
+                    </Text>
+                  </ScrollView>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.confirmRejectBtn,
+                    (!rejectionReason.trim() || isRejecting) && styles.disabledRejectBtn,
+                  ]}
+                  onPress={confirmRejection}
+                  disabled={!rejectionReason.trim() || isRejecting}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="close-circle-outline" size={19} color="#FFFFFF" />
+                  <Text style={styles.confirmRejectText}>
+                    {isRejecting ? "Cancelling order..." : "Confirm Rejection"}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.keepOrderBtn}
+                  onPress={() => {
+                    setShowRejectModal(false);
+                    setRejectionReason("");
+                  }}
+                  disabled={isRejecting}
+                >
+                  <Text style={styles.keepOrderText}>Go Back</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal
+        visible={showPinModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPinModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          Ask the customer for their 4-digit delivery PIN.
-        </Text>
-
-        {/* PIN Input */}
-        <TextInput
-          value={enteredPin}
-          onChangeText={setEnteredPin}
-          keyboardType="number-pad"
-          maxLength={4}
-          placeholder="----"
-          autoFocus
-          returnKeyType="done"
-          style={{
-            marginTop: 28,
-            borderWidth: 1,
-            borderColor: "#DDD",
-            borderRadius: 16,
-            height: 60,
-            textAlign: "center",
-            fontSize: 28,
-            letterSpacing: 14,
-            fontWeight: "700",
-          }}
-        />
-
-        {/* Verify Button */}
-        <TouchableOpacity
-          style={{
-            marginTop: 24,
-            borderRadius: 18,
-            overflow: "hidden",
-          }}
-          onPress={verifyDeliveryPin}
-          disabled={verifyingPin}
-          activeOpacity={0.85}
-        >
-          <LinearGradient
-            colors={[Colors.primary, Colors.accent]}
+          <View
             style={{
-              height: 56,
-              justifyContent: "center",
-              alignItems: "center",
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.4)",
+              justifyContent: "flex-end",
             }}
           >
-            {verifyingPin ? (
+            <View
+              style={{
+                backgroundColor: "#fff",
+                borderTopLeftRadius: 28,
+                borderTopRightRadius: 28,
+                padding: 24,
+                paddingBottom: Math.max(insets.bottom, 24),
+              }}
+            >
+              {/* Drag Handle */}
+              <View
+                style={{
+                  alignSelf: "center",
+                  width: 45,
+                  height: 5,
+                  borderRadius: 5,
+                  backgroundColor: "#DDD",
+                  marginBottom: 20,
+                }}
+              />
+
+              {/* Title */}
               <Text
                 style={{
-                  color: "#FFF",
-                  fontWeight: "600",
+                  fontSize: 22,
+                  fontWeight: "700",
+                  textAlign: "center",
                 }}
               >
-                Verifying...
+                Verify Delivery
               </Text>
-            ) : (
+
+              {/* Description */}
               <Text
                 style={{
-                  color: "#FFF",
-                  fontSize: 16,
+                  marginTop: 8,
+                  textAlign: "center",
+                  color: "#666",
+                  lineHeight: 22,
+                }}
+              >
+                Ask the customer for their 4-digit delivery PIN.
+              </Text>
+
+              {/* PIN Input */}
+              <TextInput
+                value={enteredPin}
+                onChangeText={setEnteredPin}
+                keyboardType="number-pad"
+                maxLength={4}
+                placeholder="----"
+                autoFocus
+                returnKeyType="done"
+                style={{
+                  marginTop: 28,
+                  borderWidth: 1,
+                  borderColor: "#DDD",
+                  borderRadius: 16,
+                  height: 60,
+                  textAlign: "center",
+                  fontSize: 28,
+                  letterSpacing: 14,
                   fontWeight: "700",
                 }}
+              />
+
+              {/* Verify Button */}
+              <TouchableOpacity
+                style={{
+                  marginTop: 24,
+                  borderRadius: 18,
+                  overflow: "hidden",
+                }}
+                onPress={verifyDeliveryPin}
+                disabled={verifyingPin}
+                activeOpacity={0.85}
               >
-                Verify & Complete Delivery
-              </Text>
-            )}
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </KeyboardAvoidingView>
-</Modal>
+                <LinearGradient
+                  colors={[Colors.primary, Colors.accent]}
+                  style={{
+                    height: 56,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  {verifyingPin ? (
+                    <Text
+                      style={{
+                        color: "#FFF",
+                        fontWeight: "600",
+                      }}
+                    >
+                      Verifying...
+                    </Text>
+                  ) : (
+                    <Text
+                      style={{
+                        color: "#FFF",
+                        fontSize: 16,
+                        fontWeight: "700",
+                      }}
+                    >
+                      Verify & Complete Delivery
+                    </Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
 
 type MainStyles = {
   headerTopRow: ViewStyle;
-headerMetaRow: ViewStyle;
+  headerMetaRow: ViewStyle;
   container: ViewStyle;
   loadingContainer: ViewStyle;
   loadingInner: ViewStyle;
@@ -1017,6 +1055,9 @@ headerMetaRow: ViewStyle;
   nextStatusText: TextStyle;
   rejectOrderBtn: ViewStyle;
   rejectOrderText: TextStyle;
+  cancelBody: ViewStyle;
+  cancelReasonBlock: ViewStyle;
+  notifyBtnGroup: ViewStyle;
   rejectionReasonLabel: TextStyle;
   rejectionReasonText: TextStyle;
   notificationHint: TextStyle;
@@ -1027,12 +1068,14 @@ headerMetaRow: ViewStyle;
   rejectModalOverlay: ViewStyle;
   rejectModalCard: ViewStyle;
   rejectModalHandle: ViewStyle;
+  rejectModalScrollContent: ViewStyle;
   rejectModalTitle: TextStyle;
   rejectModalDescription: TextStyle;
   rejectionInput: TextStyle;
   characterCount: TextStyle;
   messagePreview: ViewStyle;
   messagePreviewTitle: TextStyle;
+  messagePreviewScroll: ViewStyle;
   messagePreviewText: TextStyle;
   confirmRejectBtn: ViewStyle;
   disabledRejectBtn: ViewStyle;
@@ -1087,9 +1130,9 @@ type CardStyles = {
 };
 
 const styles = StyleSheet.create<MainStyles>({
-  container: { 
-    flex: 1, 
-    backgroundColor: Colors.background 
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
   },
 
   printBtn: {
@@ -1114,83 +1157,84 @@ const styles = StyleSheet.create<MainStyles>({
     fontWeight: "600",
   },
 
-  loadingContainer: { 
-    flex: 1, 
-    justifyContent: "center", 
-    alignItems: "center", 
-    backgroundColor: Colors.background 
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.background,
   },
-  
-  loadingInner: { 
-    alignItems: "center", 
-    gap: 12 
+
+  loadingInner: {
+    alignItems: "center",
+    gap: 12,
   },
-  
-  loadingCircle: { 
-    width: 72, 
-    height: 72, 
-    borderRadius: 36, 
-    backgroundColor: Colors.surface, 
-    justifyContent: "center", 
-    alignItems: "center", 
-    ...Shadow.sm 
+
+  loadingCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.surface,
+    justifyContent: "center",
+    alignItems: "center",
+    ...Shadow.sm,
   },
-  
-  loadingText: { 
-    ...Typography.subhead, 
-    color: Colors.muted 
+
+  loadingText: {
+    ...Typography.subhead,
+    color: Colors.muted,
   },
 
   header: {
-  flexDirection: "column",
-  paddingHorizontal: Spacing.lg,
-  paddingTop: Spacing.sm,
-  paddingBottom: Spacing.md,
-  gap: 12,
-  backgroundColor: Colors.background,
-  borderBottomWidth: 1,
-  borderBottomColor: Colors.separator,
-},
+    flexDirection: "column",
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.md,
+    gap: 12,
+    backgroundColor: Colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.separator,
+  },
 
-headerTopRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 12,
-},
+  headerTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
 
-headerCenter: {
-  flex: 1,
-},
+  headerCenter: {
+    flex: 1,
+    justifyContent: "center",
+  },
 
-headerMetaRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 10,
-  paddingLeft: 52,
-  flexWrap: "wrap",
-},
-  
+  headerMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+
   backBtn: {
-    width: 40, 
-    height: 40, 
+    width: 40,
+    height: 40,
     borderRadius: 12,
     backgroundColor: Colors.surface,
-    justifyContent: "center", 
+    justifyContent: "center",
     alignItems: "center",
   },
-  
-  title: { 
-    ...Typography.title2, 
+
+  title: {
+    ...Typography.title2,
     color: Colors.textPrimary,
     fontSize: 18,
+    lineHeight: 22,
   },
-  
-  orderId: { 
-    ...Typography.caption, 
-    color: Colors.muted, 
-    marginTop: 2 
+
+  orderId: {
+    ...Typography.caption,
+    color: Colors.muted,
+    marginTop: 1,
   },
-  
+
   statusPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -1199,21 +1243,23 @@ headerMetaRow: {
     paddingVertical: 5,
     borderWidth: 1,
     gap: 5,
-  },
-  
-  statusDot: { 
-    width: 6, 
-    height: 6, 
-    borderRadius: 3 
-  },
-  
-  statusPillText: { 
-    fontSize: 10, 
-    fontWeight: "600" 
+    height: 26,
   },
 
-  scroll: { 
-    paddingHorizontal: Spacing.lg, 
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: "600",
+    lineHeight: 14,
+  },
+
+  scroll: {
+    paddingHorizontal: Spacing.lg,
     paddingBottom: 40,
     paddingTop: Spacing.md,
   },
@@ -1225,23 +1271,23 @@ headerMetaRow: {
     marginBottom: Spacing.lg,
     ...Shadow.md,
   },
-  
+
   stepperHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: Spacing.md,
   },
-  
-  stepperTitle: { 
-    ...Typography.headline, 
-    color: Colors.textPrimary 
+
+  stepperTitle: {
+    ...Typography.headline,
+    color: Colors.textPrimary,
   },
-  
-  stepperStep: { 
-    ...Typography.caption, 
-    color: Colors.muted, 
-    fontWeight: "500" 
+
+  stepperStep: {
+    ...Typography.caption,
+    color: Colors.muted,
+    fontWeight: "500",
   },
 
   progressTrack: {
@@ -1251,7 +1297,7 @@ headerMetaRow: {
     overflow: "hidden",
     marginBottom: Spacing.lg,
   },
-  
+
   progressFill: {
     height: "100%",
     borderRadius: Radius.full,
@@ -1273,11 +1319,11 @@ headerMetaRow: {
     borderWidth: 1,
     borderColor: Colors.danger + "30",
   },
-  
-  cancelledText: { 
-    fontSize: 14, 
-    fontWeight: "600", 
-    color: Colors.danger 
+
+  cancelledText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.danger,
   },
 
   deliveredBanner: {
@@ -1290,30 +1336,30 @@ headerMetaRow: {
     borderWidth: 1,
     borderColor: Colors.success + "30",
   },
-  
-  deliveredText: { 
-    fontSize: 14, 
-    fontWeight: "600", 
-    color: Colors.success 
+
+  deliveredText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.success,
   },
 
-  nextStatusBtn: { 
-    borderRadius: Radius.xl, 
-    overflow: "hidden", 
-    ...Shadow.colored(Colors.primary) 
+  nextStatusBtn: {
+    borderRadius: Radius.xl,
+    overflow: "hidden",
+    ...Shadow.colored(Colors.primary),
   },
-  
-  nextStatusGrad: { 
-    flexDirection: "row", 
-    alignItems: "center", 
-    justifyContent: "center", 
-    paddingVertical: 14 
+
+  nextStatusGrad: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
   },
-  
-  nextStatusText: { 
-    color: "#fff", 
-    fontSize: 15, 
-    fontWeight: "600" 
+
+  nextStatusText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
   },
 
   rejectOrderBtn: {
@@ -1332,25 +1378,49 @@ headerMetaRow: {
     fontSize: 15,
     fontWeight: "700",
   },
+
+  cancelBody: {
+    gap: 12,
+  },
+
+  cancelReasonBlock: {
+    backgroundColor: Colors.danger + "08",
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.danger,
+    borderRadius: Radius.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+
+  notifyBtnGroup: {
+    gap: 10,
+  },
+
   rejectionReasonLabel: {
     color: Colors.muted,
-    fontSize: 12,
-    fontWeight: "600",
-    marginBottom: 5,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    marginBottom: 6,
   },
+
   rejectionReasonText: {
     color: Colors.textPrimary,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 21,
   },
+
   notificationHint: {
     color: Colors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
-    marginTop: 12,
-    marginBottom: 12,
+    marginTop: 0,
+    marginBottom: 0,
   },
+
   whatsappNotifyBtn: {
+    width: "100%",
     minHeight: 48,
     borderRadius: Radius.lg,
     backgroundColor: "#25D366",
@@ -1358,9 +1428,10 @@ headerMetaRow: {
     alignItems: "center",
     justifyContent: "center",
     gap: 9,
-    marginBottom: 9,
   },
+
   emailNotifyBtn: {
+    width: "100%",
     minHeight: 48,
     borderRadius: Radius.lg,
     backgroundColor: Colors.surface,
@@ -1371,28 +1442,35 @@ headerMetaRow: {
     justifyContent: "center",
     gap: 9,
   },
+
   notifyButtonText: {
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "700",
   },
+
   emailNotifyButtonText: {
     color: Colors.primary,
     fontSize: 14,
     fontWeight: "700",
   },
+
   rejectModalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "flex-end",
   },
+
   rejectModalCard: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
-    padding: 22,
-    maxHeight: "92%",
+    paddingHorizontal: 22,
+    paddingTop: 14,
+    maxHeight: "90%",
+    flexShrink: 1,
   },
+
   rejectModalHandle: {
     alignSelf: "center",
     width: 44,
@@ -1401,12 +1479,18 @@ headerMetaRow: {
     backgroundColor: "#DDDDDD",
     marginBottom: 18,
   },
+
+  rejectModalScrollContent: {
+    paddingBottom: 4,
+  },
+
   rejectModalTitle: {
     fontSize: 21,
     fontWeight: "700",
     color: Colors.textPrimary,
     textAlign: "center",
   },
+
   rejectModalDescription: {
     fontSize: 13,
     lineHeight: 19,
@@ -1415,6 +1499,7 @@ headerMetaRow: {
     marginTop: 7,
     marginBottom: 16,
   },
+
   rejectionInput: {
     minHeight: 92,
     maxHeight: 130,
@@ -1426,20 +1511,24 @@ headerMetaRow: {
     color: Colors.textPrimary,
     backgroundColor: "#FAFAFA",
   },
+
   characterCount: {
     textAlign: "right",
     color: Colors.muted,
     fontSize: 11,
     marginTop: 5,
   },
+
   messagePreview: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
     padding: 13,
     marginTop: 12,
     marginBottom: 16,
-    maxHeight: 155,
+    maxHeight: 140,
+    overflow: "hidden",
   },
+
   messagePreviewTitle: {
     color: Colors.muted,
     fontSize: 10,
@@ -1447,11 +1536,17 @@ headerMetaRow: {
     letterSpacing: 0.8,
     marginBottom: 7,
   },
+
+  messagePreviewScroll: {
+    maxHeight: 90,
+  },
+
   messagePreviewText: {
     color: Colors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
   },
+
   confirmRejectBtn: {
     minHeight: 52,
     borderRadius: Radius.lg,
@@ -1461,20 +1556,24 @@ headerMetaRow: {
     justifyContent: "center",
     gap: 8,
   },
+
   disabledRejectBtn: {
     opacity: 0.45,
   },
+
   confirmRejectText: {
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700",
   },
+
   keepOrderBtn: {
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 13,
     marginTop: 4,
   },
+
   keepOrderText: {
     color: Colors.textSecondary,
     fontSize: 14,
@@ -1489,47 +1588,47 @@ headerMetaRow: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.separator,
   },
-  
-  infoKey: { 
-    ...Typography.subhead, 
-    color: Colors.muted 
-  },
-  
-  infoValue: { 
-    ...Typography.subhead, 
-    fontWeight: "500", 
-    color: Colors.textPrimary, 
-    maxWidth: "60%", 
-    textAlign: "right" 
+
+  infoKey: {
+    ...Typography.subhead,
+    color: Colors.muted,
   },
 
-  addressBlock: { 
-    paddingVertical: 4 
+  infoValue: {
+    ...Typography.subhead,
+    fontWeight: "500",
+    color: Colors.textPrimary,
+    maxWidth: "60%",
+    textAlign: "right",
   },
-  
-  addressType: { 
-    fontSize: 14, 
-    fontWeight: "600", 
-    color: Colors.textPrimary, 
-    marginBottom: 4 
+
+  addressBlock: {
+    paddingVertical: 4,
   },
-  
-  addressLine: { 
-    ...Typography.subhead, 
-    color: Colors.textSecondary, 
-    marginBottom: 3 
+
+  addressType: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+    marginBottom: 4,
   },
-  
-  addressMuted: { 
-    ...Typography.footnote, 
-    color: Colors.muted, 
-    marginBottom: 3 
+
+  addressLine: {
+    ...Typography.subhead,
+    color: Colors.textSecondary,
+    marginBottom: 3,
   },
-  
-  phoneRow: { 
-    flexDirection: "row", 
-    alignItems: "center", 
-    marginTop: 3 
+
+  addressMuted: {
+    ...Typography.footnote,
+    color: Colors.muted,
+    marginBottom: 3,
+  },
+
+  phoneRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 3,
   },
 
   itemRow: {
@@ -1540,39 +1639,39 @@ headerMetaRow: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.separator,
   },
-  
-  itemLeft: { 
-    flex: 1 
-  },
-  
-  itemName: { 
-    ...Typography.subhead, 
-    fontWeight: "600", 
-    color: Colors.textPrimary, 
-    marginBottom: 3 
-  },
-  
-  itemQty: { 
-    ...Typography.caption, 
-    color: Colors.muted 
-  },
-  
-  itemPrice: { 
-    fontSize: 15, 
-    fontWeight: "600", 
-    color: Colors.textPrimary 
+
+  itemLeft: {
+    flex: 1,
   },
 
-  divider: { 
-    height: StyleSheet.hairlineWidth, 
-    backgroundColor: Colors.separator, 
-    marginVertical: 6 
+  itemName: {
+    ...Typography.subhead,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+    marginBottom: 3,
   },
-  
-  totalAmount: { 
-    fontSize: 20, 
-    fontWeight: "700", 
-    color: Colors.primary 
+
+  itemQty: {
+    ...Typography.caption,
+    color: Colors.muted,
+  },
+
+  itemPrice: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+  },
+
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.separator,
+    marginVertical: 6,
+  },
+
+  totalAmount: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: Colors.primary,
   },
 
   supportCard: {
@@ -1583,33 +1682,33 @@ headerMetaRow: {
     ...Shadow.sm,
     alignItems: "center",
   },
-  
+
   supportHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginBottom: Spacing.sm,
   },
-  
+
   supportTitle: {
     ...Typography.headline,
     color: Colors.textPrimary,
     fontSize: 16,
   },
-  
+
   supportText: {
     ...Typography.caption,
     color: Colors.muted,
     textAlign: "center",
     marginBottom: Spacing.md,
   },
-  
+
   supportBtn: {
     borderRadius: Radius.lg,
     overflow: "hidden",
     width: "100%",
   },
-  
+
   supportBtnGrad: {
     flexDirection: "row",
     alignItems: "center",
@@ -1619,7 +1718,7 @@ headerMetaRow: {
     borderWidth: 1,
     borderColor: Colors.separator,
   },
-  
+
   supportBtnText: {
     fontSize: 13,
     fontWeight: "600",
@@ -1629,10 +1728,11 @@ headerMetaRow: {
   paymentBadge: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
     borderRadius: 20,
-    gap: 4,
+    gap: 5,
+    height: 26,
   },
 
   qrPaymentBadge: {
@@ -1644,42 +1744,43 @@ headerMetaRow: {
   },
 
   paymentBadgeText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "600",
+    lineHeight: 14,
   },
 });
 
 const stepStyles = StyleSheet.create<StepStyles>({
-  stepCol: { 
-    alignItems: "center", 
-    flex: 1, 
-    gap: 6 
+  stepCol: {
+    alignItems: "center",
+    flex: 1,
+    gap: 6,
   },
-  
+
   dot: {
-    width: 36, 
-    height: 36, 
+    width: 36,
+    height: 36,
     borderRadius: 18,
-    justifyContent: "center", 
+    justifyContent: "center",
     alignItems: "center",
     ...Shadow.sm,
   },
-  
-  dotActive: { 
-    ...Shadow.colored(Colors.primary) 
+
+  dotActive: {
+    ...Shadow.colored(Colors.primary),
   },
-  
+
   dotEmpty: {
-    width: 36, 
-    height: 36, 
+    width: 36,
+    height: 36,
     borderRadius: 18,
     backgroundColor: Colors.surface,
-    justifyContent: "center", 
+    justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1.5, 
+    borderWidth: 1.5,
     borderColor: Colors.separator,
   },
-  
+
   stepLabel: {
     fontSize: 10,
     fontWeight: "500",
@@ -1700,22 +1801,22 @@ const cardStyles = StyleSheet.create<CardStyles>({
     borderWidth: 1,
     borderColor: Colors.separator,
   },
-  
+
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: Spacing.md,
     gap: 10,
   },
-  
+
   iconBg: {
-    width: 36, 
-    height: 36, 
+    width: 36,
+    height: 36,
     borderRadius: 10,
-    justifyContent: "center", 
+    justifyContent: "center",
     alignItems: "center",
   },
-  
+
   cardLabel: {
     ...Typography.headline,
     color: Colors.textPrimary,
