@@ -378,9 +378,23 @@ console.log(
           )}
         </Animated.View>
 
-        {/* Basic Information */}
-        <Animated.View entering={FadeInUp.delay(150)}>
-          <Text style={styles.sectionTitle}>Basic Information</Text>
+        {/* Basic Information — frosted glass container */}
+        <Animated.View entering={FadeInUp.delay(150)} style={styles.basicGlassWrap}>
+          <BlurView intensity={48} tint="light" style={styles.basicGlass}>
+            <LinearGradient
+              colors={["rgba(255,255,255,0.82)", "rgba(245,247,250,0.58)", "rgba(255,255,255,0.72)"]}
+              locations={[0, 0.52, 1]}
+              style={styles.basicGlassSheen}
+            >
+              <View style={styles.basicGlassHeader}>
+                <View style={styles.basicGlassIcon}>
+                  <Ionicons name="information-circle-outline" size={20} color={Colors.textPrimary} />
+                </View>
+                <View style={styles.basicGlassHeading}>
+                  <Text style={styles.basicGlassTitle}>Basic Information</Text>
+                  <Text style={styles.basicGlassSubtitle}>Product name, pricing and category</Text>
+                </View>
+              </View>
           <InputField
             icon="pricetag-outline"
             label="Product name"
@@ -519,6 +533,8 @@ console.log(
               </View>
             </Animated.View>
           )}
+              </LinearGradient>
+          </BlurView>
         </Animated.View>
 
 
@@ -849,6 +865,64 @@ const styles = StyleSheet.create({
   uploadingText: {
     fontSize: 12,
     color: Colors.primary,
+  },
+
+  // Frosted liquid-glass basic information panel
+  basicGlassWrap: {
+    marginTop: 4,
+    marginBottom: 20,
+    borderRadius: 26,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 22,
+    elevation: 7,
+  },
+  basicGlass: {
+    borderRadius: 26,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.92)",
+    backgroundColor: "rgba(255,255,255,0.68)",
+  },
+  basicGlassSheen: {
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.48)",
+    borderRadius: 26,
+  },
+  basicGlassHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 18,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(100,116,139,0.14)",
+  },
+  basicGlassIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.76)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.95)",
+  },
+  basicGlassHeading: {
+    flex: 1,
+  },
+  basicGlassTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    letterSpacing: -0.3,
+  },
+  basicGlassSubtitle: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 3,
   },
 
   // Frosted liquid-glass inventory panel
