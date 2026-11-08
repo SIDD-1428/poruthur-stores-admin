@@ -1,9 +1,9 @@
 'use client';
 
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -629,7 +629,7 @@ export default function EditProductScreen() {
                 icon="alert-circle-outline"
                 label="Maximum order quantity"
                 helper="Maximum units one customer can buy in a single order. Enter 0 for no limit."
-                placeholder="Max Order Quantity (0 = No Limit)"
+                placeholder="(0 = No Limit)"
                 value={maxOrderQty}
                 onChangeText={setMaxOrderQty}
                 keyboardType="numeric"
