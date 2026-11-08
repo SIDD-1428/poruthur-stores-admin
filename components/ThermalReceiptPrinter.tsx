@@ -6,6 +6,9 @@ import {
   Printer,
 } from "expo-bluetooth-thermal-printer";
 import React, { useEffect, useState } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import UPNG from "upng-js";
+import { db } from "../firebase/config";
 import {
   ActivityIndicator,
   Alert,
@@ -59,6 +62,47 @@ const wrapText = (value: string, width = LINE_WIDTH) => {
   }
   if (line) lines.push(line);
   return lines;
+};
+
+const tableRow = (item: string, unit: string, qty: string, amount: string) =>
+  item.slice(0, 20).padEnd(20) +
+  unit.slice(0, 6).padEnd(6) +
+  qty.slice(0, 6).padEnd(6) +
+  amount.slice(0, 16).padStart(16);
+
+const printQrBitmap = async (printer: any, imageUrl: string) => {
+  const response = await fetch(imageUrl);
+  if (!response.ok) throw new Error("Unable to download the payment QR image.");
+  const buffer = await response.arrayBuffer();
+  const decoded = (UPNG as any).decode(buffer);
+  const rgba = (UPNG as any).toRGBA8(decoded)[0] as Uint8Array;
+  const sourceWidth = decoded.width as number;
+  const sourceHeight = decoded.height as number;
+  const targetWidth = Math.min(384, sourceWidth);
+  const targetHeight = Math.max(1, Math.round((sourceHeight / sourceWidth) * targetWidth));
+  const bytesPerRow = Math.ceil(targetWidth / 8);
+  const raster = new Uint8Array(bytesPerRow * targetHeight);
+
+  for (let y = 0; y < targetHeight; y++) {
+    const sourceY = Math.min(sourceHeight - 1, Math.floor((y * sourceHeight) / targetHeight));
+    for (let x = 0; x < targetWidth; x++) {
+      const sourceX = Math.min(sourceWidth - 1, Math.floor((x * sourceWidth) / targetWidth));
+      const offset = (sourceY * sourceWidth + sourceX) * 4;
+      const luminance =
+        0.299 * rgba[offset] + 0.587 * rgba[offset + 1] + 0.114 * rgba[offset + 2];
+      if (luminance < 160) raster[y * bytesPerRow + (x >> 3)] |= 0x80 >> (x & 7);
+    }
+  }
+
+  const header = new Uint8Array([
+    0x1d, 0x76, 0x30, 0x00,
+    bytesPerRow & 0xff, (bytesPerRow >> 8) & 0xff,
+    targetHeight & 0xff, (targetHeight >> 8) & 0xff,
+  ]);
+  const command = new Uint8Array(header.length + raster.length);
+  command.set(header, 0);
+  command.set(raster, header.length);
+  await printer.raw(command);
 };
 
 const twoColumnLine = (left: string, right: string) => {
@@ -222,6 +266,15 @@ export default function ThermalReceiptPrinter({ order }: Props) {
       const delivery = order.pricing?.deliveryCharge ?? 0;
       const tax = order.pricing?.tax ?? 0;
       const total = order.pricing?.grandTotal ?? order.total ?? 0;
+      let paymentQrUrl = "";
+      try {
+        const paymentSettings = await getDoc(doc(db, "settings", "payment"));
+        paymentQrUrl = paymentSettings.exists()
+          ? String(paymentSettings.data()?.qrCodeUrl ?? "")
+          : "";
+      } catch (qrError) {
+        console.warn("Unable to fetch store payment QR", qrError);
+      }
 
       await printer.alignCenter();
       await printer.bold(true);
@@ -232,6 +285,18 @@ export default function ThermalReceiptPrinter({ order }: Props) {
       await printer.println("Shop Good, Live Good");
       await printer.println("Abbigere, Bengaluru");
       await printer.println("+91 90358 13611");
+      if (paymentQrUrl) {
+        try {
+          await printer.alignRight();
+          await printQrBitmap(printer, paymentQrUrl);
+          await printer.println("");
+        } catch (qrError) {
+          console.warn("Unable to print payment QR", qrError);
+          await printer.alignLeft();
+          await printer.println("Payment QR unavailable");
+        }
+      }
+      await printer.alignLeft();
       await printer.separator("=");
 
       await printer.alignLeft();
@@ -260,19 +325,21 @@ export default function ThermalReceiptPrinter({ order }: Props) {
       await printer.separator("-");
 
       await printer.bold(true);
-      await printer.println("ITEMS");
+      await printer.println("ORDER DETAILS");
       await printer.bold(false);
+      await printer.println(tableRow("Item", "Unit", "Qty", "Amount"));
+      await printer.separator("-");
       for (const item of items) {
-        const itemName = String(item.name ?? "Item") + (item.unit ? " (" + String(item.unit) + ")" : "");
-        for (const line of wrapText(itemName, 30)) {
-          await printer.println(line);
-        }
         const quantity = Number(item.quantity ?? 0);
         const unitPrice = Number(item.unitPrice ?? item.price ?? 0);
         const lineTotal = Number(item.totalPrice ?? unitPrice * quantity);
+        const itemLines = wrapText(String(item.name ?? "Item"), 20);
         await printer.println(
-          twoColumnLine(`  ${quantity} x ${money(unitPrice)}`, money(lineTotal))
+          tableRow(itemLines[0] ?? "Item", String(item.unit ?? "-"), String(quantity), money(lineTotal))
         );
+        for (const continuation of itemLines.slice(1)) {
+          await printer.println(tableRow(continuation, "", "", ""));
+        }
       }
       await printer.separator("-");
 
