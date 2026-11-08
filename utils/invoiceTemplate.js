@@ -13,11 +13,10 @@ export const generateInvoiceHtml = (order) => {
       (item) => `
       <tr>
           <td>${item.name}</td>
+          <td style="text-align:center">${item.unit ?? "-"}</td>
           <td style="text-align:center">${item.quantity}</td>
-          <td style="text-align:right">₹${item.mrp ?? item.unitPrice ?? item.price}</td>
-          <td style="text-align:right">₹${item.unitPrice ?? item.price}</td>
           <td style="text-align:right">
-            ₹${item.totalPrice ?? (item.price * item.quantity)}
+            ₹${item.totalPrice ?? ((item.unitPrice ?? item.price) * item.quantity)}
           </td>
       </tr>
     `
@@ -154,9 +153,8 @@ ${order.address?.pincode}
 <table>
 <tr>
 <th>Item</th>
+<th>Unit</th>
 <th>Qty</th>
-<th>MRP</th>
-<th>Selling Price</th>
 <th>Amount</th>
 </tr>
 ${items}
