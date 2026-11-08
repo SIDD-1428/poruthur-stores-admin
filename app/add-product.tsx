@@ -319,6 +319,8 @@ console.log(
       </LinearGradient>
 
       <ScrollView
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}
@@ -469,26 +471,26 @@ console.log(
                     <View style={styles.dropdownDivider} />
                   )}
                   
-                 {categories.map(
-  (item:any) => (
-    <TouchableOpacity
-      key={item.id}
-      style={styles.dropdownItem}
-      onPress={() => {
-        setCategory(item.name);
-        setDropdownOpen(false);
-      }}
-    >
-      <Text
-        style={
-          styles.dropdownItemText
-        }
-      >
-        {item.name}
-      </Text>
-    </TouchableOpacity>
-  )
-)}
+                  <ScrollView
+                    style={styles.categoryList}
+                    nestedScrollEnabled
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator
+                  >
+                    {categories.map((item: any) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          setCategory(item.name);
+                          setDropdownOpen(false);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.dropdownItemText}>{item.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
 
                   {categories.length === 0 && (
                     <Text style={styles.dropdownEmptyText}>No categories yet. Tap &quot;Add New Category&quot; to create one.</Text>
@@ -1331,6 +1333,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: 12,
     maxHeight: 250,
+  },
+  categoryList: {
+    maxHeight: 190,
+    flexGrow: 0,
   },
   dropdownItem: {
     flexDirection: "row",
