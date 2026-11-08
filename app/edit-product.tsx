@@ -6,37 +6,37 @@ import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-    addDoc,
-    collection,
-    deleteField,
-    doc,
-    getDoc,
-    getDocs,
-    serverTimestamp,
-    updateDoc,
+  addDoc,
+  collection,
+  deleteField,
+  doc,
+  getDoc,
+  getDocs,
+  serverTimestamp,
+  updateDoc,
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, {
-    useEffect,
-    useState,
+  useEffect,
+  useState,
 } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import Animated, {
-    FadeInDown,
-    FadeInUp,
-    ZoomIn,
+  FadeInDown,
+  FadeInUp,
+  ZoomIn,
 } from "react-native-reanimated";
 import { db, storage } from "../firebase/config";
 
@@ -545,7 +545,6 @@ export default function EditProductScreen() {
         {/* Internal product classification */}
         <Animated.View entering={FadeInUp.delay(175)}>
           <Text style={styles.sectionTitle}>Product Classification</Text>
-          <Text style={styles.classificationHint}>Internal inventory setting. This is not shown as a label to customers.</Text>
           <View style={styles.classificationRow}>
             <TouchableOpacity style={[styles.classificationOption, productType === "branded" && styles.classificationOptionActive]} onPress={() => { setProductType("branded"); Haptics.selectionAsync(); }} activeOpacity={0.8}>
               <Ionicons name="pricetag-outline" size={18} color={productType === "branded" ? "#FFFFFF" : Colors.textSecondary} />

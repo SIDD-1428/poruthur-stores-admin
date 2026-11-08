@@ -89,7 +89,7 @@ export default function BrandsScreen() {
         </View>
       </LinearGradient>
       <View style={styles.summaryRow}>
-        <View><Text style={styles.count}>{brands.length} brands</Text><Text style={styles.helper}>Inactive brands remain linked to existing products.</Text></View>
+        <View><Text style={styles.count}>{brands.length} brands</Text></View>
         <TouchableOpacity style={styles.addBrandButton} onPress={openAdd}><Ionicons name="add" size={17} color={C.white} /><Text style={styles.addBrandText}>Add Brand</Text></TouchableOpacity>
       </View>
       {loading ? <View style={styles.center}><ActivityIndicator size="large" color={C.black} /></View> : (
@@ -103,10 +103,8 @@ export default function BrandsScreen() {
             {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.imagePreview} /> : <View style={styles.imagePlaceholder}><Ionicons name="image-outline" size={28} color={C.muted} /><Text style={styles.imagePlaceholderText}>Upload brand image</Text></View>}
             <View style={styles.imageAction}>{uploadingImage ? <ActivityIndicator color={C.white} size="small" /> : <><Ionicons name="cloud-upload-outline" size={16} color={C.white} /><Text style={styles.imageActionText}>{imageUrl ? "Change image" : "Choose image"}</Text></>}</View>
           </TouchableOpacity>
-          <Text style={styles.note}>Use a clear logo or brand banner. It will appear as the background of the brand tile in the customer app.</Text>
           <Text style={styles.label}>BRAND NAME</Text>
           <TextInput value={name} onChangeText={setName} placeholder="e.g. Aashirvaad" placeholderTextColor={C.muted} style={styles.input} autoCapitalize="words" maxLength={60} />
-          <Text style={styles.note}>Use one consistent spelling. Products reference this catalogue entry.</Text>
           <View style={styles.modalActions}>
             <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)} disabled={saving}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
             <TouchableOpacity style={styles.saveButton} onPress={saveBrand} disabled={saving}>{saving ? <ActivityIndicator color={C.white} /> : <><Ionicons name="checkmark" size={18} color={C.white} /><Text style={styles.saveText}>Save Brand</Text></>}</TouchableOpacity>

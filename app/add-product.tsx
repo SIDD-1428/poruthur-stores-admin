@@ -517,7 +517,6 @@ console.log(
         {/* Internal product classification */}
         <Animated.View entering={FadeInUp.delay(175)}>
           <Text style={styles.sectionTitle}>Product Classification</Text>
-          <Text style={styles.classificationHint}>Internal inventory setting. This is not shown as a label to customers.</Text>
           <View style={styles.classificationRow}>
             <TouchableOpacity style={[styles.classificationOption, productType === "branded" && styles.classificationOptionActive]} onPress={() => { setProductType("branded"); Haptics.selectionAsync(); }} activeOpacity={0.8}>
               <Ionicons name="pricetag-outline" size={18} color={productType === "branded" ? "#FFFFFF" : Colors.textSecondary} />
