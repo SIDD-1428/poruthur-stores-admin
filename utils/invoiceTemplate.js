@@ -14,6 +14,7 @@ export const generateInvoiceHtml = (order) => {
       <tr>
           <td>${item.name}</td>
           <td style="text-align:center">${item.quantity}</td>
+          <td style="text-align:right">₹${item.mrp ?? item.unitPrice ?? item.price}</td>
           <td style="text-align:right">₹${item.unitPrice ?? item.price}</td>
           <td style="text-align:right">
             ₹${item.totalPrice ?? (item.price * item.quantity)}
@@ -154,7 +155,8 @@ ${order.address?.pincode}
 <tr>
 <th>Item</th>
 <th>Qty</th>
-<th>Unit</th>
+<th>MRP</th>
+<th>Selling Price</th>
 <th>Amount</th>
 </tr>
 ${items}
@@ -162,6 +164,7 @@ ${items}
 </div>
 
 <table class="summary">
+${Number(order.pricing?.savings ?? order.items.reduce((sum, item) => sum + Number(item.savings ?? Math.max(0, Number(item.mrp ?? item.unitPrice ?? item.price) - Number(item.unitPrice ?? item.price)) * Number(item.quantity ?? 0)), 0)) > 0 ? `<tr style="color:#18864B;font-weight:bold"><td>You Saved</td><td align="right">₹${Number(order.pricing?.savings ?? order.items.reduce((sum, item) => sum + Number(item.savings ?? Math.max(0, Number(item.mrp ?? item.unitPrice ?? item.price) - Number(item.unitPrice ?? item.price)) * Number(item.quantity ?? 0)), 0)).toFixed(2)}</td></tr>` : ""}
 <tr>
 <td>Subtotal</td>
 <td align="right">₹${order.pricing?.subtotal ?? order.total}</td>
