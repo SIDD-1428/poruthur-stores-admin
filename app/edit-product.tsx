@@ -97,6 +97,10 @@ export default function EditProductScreen() {
   const [image, setImage] = useState("");
   const [protext, setProtext] = useState("");
   const [category, setCategory] = useState("");
+  const [productType, setProductType] = useState<"branded" | "local">("local");
+  const [brandId, setBrandId] = useState("");
+  const [brands, setBrands] = useState<any[]>([]);
+  const [brandDropdownOpen, setBrandDropdownOpen] = useState(false);
   const [rating, setRating] = useState("");
   const [unit, setUnit] = useState("");
   const [stock, setStock] = useState("");
@@ -115,6 +119,7 @@ export default function EditProductScreen() {
   useEffect(() => {
     loadProduct();
     loadCategories();
+    loadBrands();
   }, []);
 
   const loadCategories = async () => {
@@ -126,6 +131,13 @@ export default function EditProductScreen() {
     } catch (error) {
       console.log("Error loading categories:", error);
     }
+  };
+
+  const loadBrands = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, "brands"));
+      setBrands(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a: any, b: any) => String(a.name || "").localeCompare(String(b.name || ""))));
+    } catch (error) { console.log("Error loading brands:", error); }
   };
 
   const loadProduct = async () => {
@@ -143,6 +155,8 @@ export default function EditProductScreen() {
         setRating(String(data.rating || ""));
         setUnit(data.unit || "");
         setMaxOrderQty(String(data.maxOrderQty || 0));
+        setProductType(data.productType === "branded" || data.brandId ? "branded" : "local");
+        setBrandId(data.brandId || "");
       }
     } catch (error) {
       console.log(error);
@@ -256,7 +270,7 @@ export default function EditProductScreen() {
   };
 
   const updateProduct = async () => {
-    if (!name || !price || !mrp || !category || Number(mrp) < Number(price)) {
+    if (!name || !price || !mrp || !category || Number(mrp) < Number(price) || (productType === "branded" && !brandId)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         "Missing Information",
@@ -278,6 +292,8 @@ export default function EditProductScreen() {
         rating: Number(rating) || 0,
         unit: unit || "",
         maxOrderQty: Number(maxOrderQty) || 0,
+        productType,
+        brandId: productType === "branded" ? brandId : null,
         updatedAt: new Date(),
       });
 
@@ -524,6 +540,40 @@ export default function EditProductScreen() {
           )}
         </Animated.View>
 
+
+        {/* Internal product classification */}
+        <Animated.View entering={FadeInUp.delay(175)}>
+          <Text style={styles.sectionTitle}>Product Classification</Text>
+          <Text style={styles.classificationHint}>Internal inventory setting. This is not shown as a label to customers.</Text>
+          <View style={styles.classificationRow}>
+            <TouchableOpacity style={[styles.classificationOption, productType === "branded" && styles.classificationOptionActive]} onPress={() => { setProductType("branded"); Haptics.selectionAsync(); }} activeOpacity={0.8}>
+              <Ionicons name="pricetag-outline" size={18} color={productType === "branded" ? "#FFFFFF" : Colors.textSecondary} />
+              <Text style={[styles.classificationOptionText, productType === "branded" && styles.classificationOptionTextActive]}>Branded</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.classificationOption, productType === "local" && styles.classificationOptionActive]} onPress={() => { setProductType("local"); setBrandId(""); Haptics.selectionAsync(); }} activeOpacity={0.8}>
+              <Ionicons name="storefront-outline" size={18} color={productType === "local" ? "#FFFFFF" : Colors.textSecondary} />
+              <Text style={[styles.classificationOptionText, productType === "local" && styles.classificationOptionTextActive]}>Local</Text>
+            </TouchableOpacity>
+          </View>
+          {productType === "branded" && <>
+            <Text style={styles.brandFieldLabel}>BRAND *</Text>
+            <TouchableOpacity style={styles.brandPicker} onPress={() => setBrandDropdownOpen(!brandDropdownOpen)}>
+              <Text style={[styles.brandPickerText, !brandId && styles.brandPickerPlaceholder]}>{brands.find((brand: any) => brand.id === brandId)?.name || "Select a brand"}</Text>
+              <Ionicons name={brandDropdownOpen ? "chevron-up" : "chevron-down"} size={19} color={Colors.muted} />
+            </TouchableOpacity>
+            {brandDropdownOpen && <View style={styles.brandDropdown}>
+              {brands.filter((brand: any) => brand.isActive !== false).map((brand: any) => <TouchableOpacity key={brand.id} style={styles.brandDropdownItem} onPress={() => { setBrandId(brand.id); setBrandDropdownOpen(false); }}>
+                <Text style={styles.brandDropdownText}>{brand.name}</Text>
+                {brand.id === brandId && <Ionicons name="checkmark-circle" size={18} color={Colors.success} />}
+              </TouchableOpacity>)}
+              {!brands.some((brand: any) => brand.isActive !== false) && <Text style={styles.brandEmptyText}>No active brands. Add one in Manage Brands.</Text>}
+              <TouchableOpacity style={styles.manageBrandsLink} onPress={() => { setBrandDropdownOpen(false); router.push("/brands"); }}>
+                <Ionicons name="settings-outline" size={16} color={Colors.textPrimary} /><Text style={styles.manageBrandsText}>Manage Brands</Text>
+              </TouchableOpacity>
+            </View>}
+          </>}
+        </Animated.View>
+
         {/* Inventory Details */}
         <Animated.View entering={FadeInUp.delay(200)}>
           <Text style={styles.sectionTitle}>Inventory Details</Text>
@@ -613,6 +663,23 @@ export default function EditProductScreen() {
 }
 
 const styles = StyleSheet.create({
+  classificationHint: { fontSize: 12, color: Colors.muted, marginBottom: 10, lineHeight: 18 },
+  classificationRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
+  classificationOption: { flex: 1, minHeight: 48, borderWidth: 1, borderColor: Colors.separator, borderRadius: 13, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.surface },
+  classificationOptionActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  classificationOptionText: { color: Colors.textSecondary, fontSize: 14, fontWeight: "600" },
+  classificationOptionTextActive: { color: "#FFFFFF" },
+  brandFieldLabel: { fontSize: 11, letterSpacing: 1, fontWeight: "700", color: Colors.muted, marginBottom: 7, marginTop: 4 },
+  brandPicker: { minHeight: 50, borderWidth: 1, borderColor: Colors.separator, borderRadius: 13, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: Colors.card },
+  brandPickerText: { fontSize: 14, color: Colors.textPrimary },
+  brandPickerPlaceholder: { color: Colors.muted },
+  brandDropdown: { borderWidth: 1, borderColor: Colors.separator, borderRadius: 13, marginTop: 7, overflow: "hidden", backgroundColor: Colors.card },
+  brandDropdownItem: { minHeight: 44, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: Colors.separator },
+  brandDropdownText: { fontSize: 14, color: Colors.textPrimary },
+  brandEmptyText: { padding: 14, color: Colors.muted, fontSize: 12 },
+  manageBrandsLink: { minHeight: 44, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.surface },
+  manageBrandsText: { fontSize: 13, fontWeight: "600", color: Colors.textPrimary },
+
   container: {
     flex: 1,
     backgroundColor: Colors.background,
