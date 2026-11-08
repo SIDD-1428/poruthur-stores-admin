@@ -188,7 +188,7 @@ export default function ThermalReceiptPrinter({ order }: Props) {
       if (!isBluetoothEnabled()) {
         Alert.alert(
           "Bluetooth is off",
-          "Turn on Bluetooth in Android Settings, then try again."
+          "Turn on Bluetooth, then try again."
         );
         return;
       }
@@ -296,7 +296,7 @@ export default function ThermalReceiptPrinter({ order }: Props) {
       }
       await printer.println("Shop Good, Live Good");
       await printer.println("Abbigere, Bengaluru");
-      await printer.println("+91 90358 13611");
+      await printer.println("+91 80507 80381");
       await printer.separator("=");
 
       await printer.alignLeft();
@@ -307,7 +307,7 @@ export default function ThermalReceiptPrinter({ order }: Props) {
       await printer.separator("-");
 
       await printer.bold(true);
-      await printer.println("CUSTOMER");
+      await printer.println("CUSTOMER DETAILS");
       await printer.bold(false);
       await printer.println(String(order.customerName ?? "N/A"));
       if (order.address?.phone) await printer.println(`Phone: ${order.address.phone}`);
