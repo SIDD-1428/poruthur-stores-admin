@@ -1,14 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { addDoc, collection, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Modal, Platform, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { db } from "../firebase/config";
+import { ActivityIndicator, Alert, FlatList, Image, Modal, Platform, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { db, storage } from "../firebase/config";
 
 const C = { black: "#000000", dark: "#333333", white: "#FFFFFF", surface: "#F5F5F5", border: "#E8E8E8", muted: "#999999", text: "#111111", secondary: "#666666", green: "#34C759" };
-type Brand = { id: string; name: string; isActive?: boolean };
+type Brand = { id: string; name: string; imageUrl?: string; isActive?: boolean };
 
 export default function BrandsScreen() {
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -16,6 +18,8 @@ export default function BrandsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -26,17 +30,36 @@ export default function BrandsScreen() {
     }, (error) => { console.error("Brands listener failed:", error); setLoading(false); Alert.alert("Unable to load brands", error.message); });
   }, []);
 
-  const openAdd = () => { setEditingId(null); setName(""); setModalVisible(true); };
-  const openEdit = (brand: Brand) => { setEditingId(brand.id); setName(brand.name); setModalVisible(true); };
+  const openAdd = () => { setEditingId(null); setName(""); setImageUrl(""); setModalVisible(true); };
+  const openEdit = (brand: Brand) => { setEditingId(brand.id); setName(brand.name); setImageUrl(brand.imageUrl || ""); setModalVisible(true); };
+
+  const pickBrandImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.status !== "granted") { Alert.alert("Permission Required", "Allow gallery access to select a brand image."); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.82, allowsEditing: true, aspect: [16, 9] });
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+    setUploadingImage(true);
+    try {
+      const response = await fetch(result.assets[0].uri);
+      const blob = await response.blob();
+      const path = `Brands/${editingId || "new"}/${Date.now()}.jpg`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, blob, { contentType: "image/jpeg" });
+      setImageUrl(await getDownloadURL(storageRef));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) { Alert.alert("Image upload failed", error?.message || "Please try again."); }
+    finally { setUploadingImage(false); }
+  };
   const saveBrand = async () => {
     const cleanName = name.trim().replace(/\s+/g, " ");
     if (!cleanName) { Alert.alert("Brand name required", "Enter a brand name."); return; }
     if (brands.some((brand) => brand.name.trim().toLowerCase() === cleanName.toLowerCase() && brand.id !== editingId)) { Alert.alert("Duplicate brand", "A brand with this name already exists."); return; }
+    if (uploadingImage) { Alert.alert("Please wait", "The brand image is still uploading."); return; }
     setSaving(true);
     try {
-      if (editingId) await updateDoc(doc(db, "brands", editingId), { name: cleanName, normalizedName: cleanName.toLowerCase(), updatedAt: serverTimestamp() });
-      else await addDoc(collection(db, "brands"), { name: cleanName, normalizedName: cleanName.toLowerCase(), isActive: true, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-      setModalVisible(false); setName(""); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (editingId) await updateDoc(doc(db, "brands", editingId), { name: cleanName, normalizedName: cleanName.toLowerCase(), imageUrl: imageUrl || null, updatedAt: serverTimestamp() });
+      else await addDoc(collection(db, "brands"), { name: cleanName, normalizedName: cleanName.toLowerCase(), imageUrl: imageUrl || null, isActive: true, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      setModalVisible(false); setName(""); setImageUrl(""); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) { Alert.alert("Could not save brand", error?.message || "Please try again."); }
     finally { setSaving(false); }
   };
@@ -46,7 +69,7 @@ export default function BrandsScreen() {
   };
   const renderBrand = ({ item }: { item: Brand }) => (
     <View style={styles.brandCard}>
-      <View style={styles.brandIcon}><Ionicons name="pricetag-outline" size={22} color={C.text} /></View>
+      {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.brandImageThumb} /> : <View style={styles.brandIcon}><Ionicons name="pricetag-outline" size={22} color={C.text} /></View>}
       <TouchableOpacity style={styles.brandInfo} onPress={() => openEdit(item)} activeOpacity={0.7}>
         <Text style={styles.brandName}>{item.name}</Text>
         <Text style={styles.brandMeta}>{item.isActive === false ? "Inactive · Existing product links are retained" : "Active · Available for product assignment"}</Text>
@@ -75,6 +98,12 @@ export default function BrandsScreen() {
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => !saving && setModalVisible(false)}>
         <View style={styles.modalBackdrop}><View style={styles.modalCard}>
           <View style={styles.modalHeading}><Text style={styles.modalTitle}>{editingId ? "Edit Brand" : "Add Brand"}</Text><TouchableOpacity onPress={() => setModalVisible(false)} disabled={saving}><Ionicons name="close" size={22} color={C.secondary} /></TouchableOpacity></View>
+          <Text style={styles.label}>BRAND IMAGE</Text>
+          <TouchableOpacity style={styles.imagePicker} onPress={pickBrandImage} disabled={uploadingImage || saving} activeOpacity={0.8}>
+            {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.imagePreview} /> : <View style={styles.imagePlaceholder}><Ionicons name="image-outline" size={28} color={C.muted} /><Text style={styles.imagePlaceholderText}>Upload brand image</Text></View>}
+            <View style={styles.imageAction}>{uploadingImage ? <ActivityIndicator color={C.white} size="small" /> : <><Ionicons name="cloud-upload-outline" size={16} color={C.white} /><Text style={styles.imageActionText}>{imageUrl ? "Change image" : "Choose image"}</Text></>}</View>
+          </TouchableOpacity>
+          <Text style={styles.note}>Use a clear logo or brand banner. It will appear as the background of the brand tile in the customer app.</Text>
           <Text style={styles.label}>BRAND NAME</Text>
           <TextInput value={name} onChangeText={setName} placeholder="e.g. Aashirvaad" placeholderTextColor={C.muted} style={styles.input} autoCapitalize="words" maxLength={60} />
           <Text style={styles.note}>Use one consistent spelling. Products reference this catalogue entry.</Text>
@@ -104,6 +133,13 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: 16, paddingBottom: 30, flexGrow: 1 },
   brandCard: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderWidth: 1, borderColor: C.border, borderRadius: 15, marginBottom: 9 },
   brandIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: C.surface, alignItems: "center", justifyContent: "center" },
+  brandImageThumb: { width: 44, height: 44, borderRadius: 12, backgroundColor: C.surface },
+  imagePicker: { height: 142, borderRadius: 14, overflow: "hidden", backgroundColor: C.surface, marginBottom: 12, borderWidth: 1, borderColor: C.border },
+  imagePreview: { width: "100%", height: "100%", resizeMode: "cover" },
+  imagePlaceholder: { flex: 1, alignItems: "center", justifyContent: "center", gap: 7 },
+  imagePlaceholderText: { color: C.muted, fontSize: 12, fontWeight: "600" },
+  imageAction: { position: "absolute", right: 9, bottom: 9, backgroundColor: "#000000CC", borderRadius: 9, paddingHorizontal: 10, paddingVertical: 7, flexDirection: "row", alignItems: "center", gap: 5 },
+  imageActionText: { color: C.white, fontSize: 10, fontWeight: "700" },
   brandInfo: { flex: 1 },
   brandName: { fontSize: 14, fontWeight: "700", color: C.text },
   brandMeta: { fontSize: 10, color: C.muted, marginTop: 4 },
