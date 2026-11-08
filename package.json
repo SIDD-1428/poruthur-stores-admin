@@ -52,7 +52,8 @@
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.5.1",
     "react-use-confirming-dialog": "^1.0.2",
-    "upng-js": "^2.1.0"
+    "upng-js": "^2.1.0",
+    "expo-clipboard": "~8.0.8"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
