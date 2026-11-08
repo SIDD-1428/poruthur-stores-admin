@@ -8,6 +8,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import {
     addDoc,
     collection,
+    deleteField,
     doc,
     getDoc,
     getDocs,
@@ -292,7 +293,7 @@ export default function EditProductScreen() {
         rating: Number(rating) || 0,
         unit: unit || "",
         maxOrderQty: Number(maxOrderQty) || 0,
-        productType,
+        productType: deleteField(),
         brandId: productType === "branded" ? brandId : null,
         updatedAt: new Date(),
       });
