@@ -213,7 +213,6 @@ console.log(
         unit: unit || "",
         stock: Number(stock) || 0,
         maxOrderQty: Number(maxOrderQty) || 0,
-        productType,
         brandId: productType === "branded" ? brandId : null,
         createdAt: new Date(),
       });
