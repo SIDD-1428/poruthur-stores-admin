@@ -386,6 +386,7 @@ const productUnits = new Map<string, string>(productUnitEntries);
       const delivery = order.pricing?.deliveryCharge ?? 0;
       const tax = order.pricing?.tax ?? 0;
       const total = order.pricing?.grandTotal ?? order.total ?? 0;
+      const totalSavings = Number(order.pricing?.savings ?? items.reduce((sum: number, item: any) => sum + Number(item.savings ?? Math.max(0, Number(item.mrp ?? item.unitPrice ?? item.price ?? 0) - Number(item.unitPrice ?? item.price ?? 0)) * Number(item.quantity ?? 0)), 0));
       let paymentQrUrl = "";
       try {
         const paymentSettings = await getDoc(doc(db, "settings", "payment"));
@@ -446,6 +447,8 @@ const productUnits = new Map<string, string>(productUnitEntries);
   const quantity = Number(item.quantity ?? 0);
   const unitPrice = Number(item.unitPrice ?? item.price ?? 0);
   const lineTotal = Number(item.totalPrice ?? unitPrice * quantity);
+  const mrp = Number(item.mrp ?? unitPrice);
+  const itemSavings = Math.max(0, mrp - unitPrice) * quantity;
 
   const productId = String(item.productId ?? "").trim();
 
@@ -465,6 +468,10 @@ const productUnits = new Map<string, string>(productUnitEntries);
       money(lineTotal)
     )
   );
+        if (mrp > unitPrice) {
+          await printer.println(`  MRP: ${money(mrp)}  Selling: ${money(unitPrice)}`);
+          await printer.println(`  You saved: ${money(itemSavings)} (${quantity} item${quantity === 1 ? "" : "s"})`);
+        }
         for (const continuation of itemLines.slice(1)) {
           await printer.println(tableRow(continuation, "", "", ""));
         }
@@ -472,6 +479,7 @@ const productUnits = new Map<string, string>(productUnitEntries);
       }
       await printer.separator("-");
 
+      if (totalSavings > 0) await printer.println(twoColumnLine("You saved", money(totalSavings)));
       await printer.println(twoColumnLine("Subtotal", money(subtotal)));
       await printer.println(
         twoColumnLine("Delivery", delivery === 0 ? "FREE" : money(delivery))
