@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { BlurView } from "expo-blur";
+import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -26,6 +27,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -38,6 +40,7 @@ import Animated, {
   FadeInDown,
   FadeInUp,
   ZoomIn,
+  ZoomOut,
 } from "react-native-reanimated";
 import { db, storage } from "../firebase/config";
 
@@ -99,6 +102,8 @@ export default function EditProductScreen() {
   const [price, setPrice] = useState("");
   const [mrp, setMrp] = useState("");
   const [image, setImage] = useState("");
+  const [imageUrlModalVisible, setImageUrlModalVisible] = useState(false);
+  const [imageUrlCopied, setImageUrlCopied] = useState(false);
   const [protext, setProtext] = useState("");
   const [category, setCategory] = useState("");
   const [productType, setProductType] = useState<"branded" | "local">("local");
@@ -646,9 +651,23 @@ export default function EditProductScreen() {
           </BlurView>
         </Animated.View>
 
-        {/* Additional Details */}
-        <Animated.View entering={FadeInUp.delay(250)}>
-          <Text style={styles.sectionTitle}>Additional Details</Text>
+        {/* Additional Details — frosted glass container */}
+        <Animated.View entering={FadeInUp.delay(250)} style={styles.additionalGlassWrap}>
+          <BlurView intensity={48} tint="light" style={styles.additionalGlass}>
+            <LinearGradient
+              colors={["rgba(255,255,255,0.82)", "rgba(245,247,250,0.58)", "rgba(255,255,255,0.72)"]}
+              locations={[0, 0.52, 1]}
+              style={styles.additionalGlassSheen}
+            >
+              <View style={styles.additionalGlassHeader}>
+                <View style={styles.additionalGlassIcon}>
+                  <Ionicons name="document-text-outline" size={20} color={Colors.textPrimary} />
+                </View>
+                <View style={styles.additionalGlassHeading}>
+                  <Text style={styles.additionalGlassTitle}>Additional Details</Text>
+                  <Text style={styles.additionalGlassSubtitle}>Description and product rating</Text>
+                </View>
+              </View>
           <InputField
             icon="document-text-outline"
             label="Product description"
@@ -668,19 +687,36 @@ export default function EditProductScreen() {
             onChangeText={setRating}
             keyboardType="numeric"
           />
+            </LinearGradient>
+          </BlurView>
         </Animated.View>
 
         {/* Image URL (Advanced) */}
-        <Animated.View entering={FadeInUp.delay(300)}>
+        <Animated.View entering={FadeInUp.delay(300)} style={styles.imageUrlSection}>
           <Text style={styles.sectionTitle}>Advanced</Text>
-          <InputField
-            icon="link-outline"
-            label="Image URL"
-            helper="Paste a publicly accessible image URL. Leave blank when you upload an image above."
-            placeholder="Image URL (Optional - leave empty if using upload)"
-            value={image}
-            onChangeText={setImage}
-          />
+          <Text style={styles.fieldLabel}>Image URL</Text>
+          <Text style={styles.fieldHelper}>The image URL stays hidden until you choose to view it. Leave it blank when you upload an image above.</Text>
+          <TouchableOpacity
+            style={styles.imageUrlTrigger}
+            activeOpacity={0.82}
+            onPress={() => Alert.alert(
+              "Image URL",
+              "Would you like to view or edit the image URL?",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Show URL", onPress: () => { setImageUrlCopied(false); setImageUrlModalVisible(true); } },
+              ]
+            )}
+          >
+            <View style={styles.imageUrlTriggerIcon}>
+              <Ionicons name="link-outline" size={19} color={Colors.textPrimary} />
+            </View>
+            <View style={styles.imageUrlTriggerTextWrap}>
+              <Text style={styles.imageUrlTriggerTitle}>Show URL</Text>
+              <Text style={styles.imageUrlTriggerSubtitle}>{image ? "Image URL is set" : "No image URL added"}</Text>
+            </View>
+            <Ionicons name="eye-outline" size={20} color={Colors.textSecondary} />
+          </TouchableOpacity>
         </Animated.View>
 
         {/* Update Button */}
@@ -711,6 +747,78 @@ export default function EditProductScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+        <Modal
+          visible={imageUrlModalVisible}
+          transparent
+          statusBarTranslucent
+          animationType="none"
+          onRequestClose={() => setImageUrlModalVisible(false)}
+        >
+          <View style={styles.imageUrlModalRoot}>
+            <BlurView intensity={75} tint="light" style={StyleSheet.absoluteFill} />
+            <TouchableOpacity
+              style={styles.imageUrlModalBackdrop}
+              activeOpacity={1}
+              onPress={() => setImageUrlModalVisible(false)}
+            />
+            <Animated.View entering={ZoomIn.springify().damping(18)} exiting={ZoomOut.duration(160)} style={styles.imageUrlModalCard}>
+              <BlurView intensity={65} tint="light" style={styles.imageUrlModalGlass}>
+                <LinearGradient
+                  colors={["rgba(255,255,255,0.94)", "rgba(245,247,250,0.86)", "rgba(255,255,255,0.92)"]}
+                  style={styles.imageUrlModalContent}
+                >
+                  <View style={styles.imageUrlModalHeader}>
+                    <View style={styles.imageUrlModalIcon}>
+                      <Ionicons name="link-outline" size={21} color={Colors.textPrimary} />
+                    </View>
+                    <View style={styles.imageUrlModalHeading}>
+                      <Text style={styles.imageUrlModalTitle}>Image URL</Text>
+                      <Text style={styles.imageUrlModalSubtitle}>View, edit or copy the image link</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setImageUrlModalVisible(false)} style={styles.imageUrlCloseButton}>
+                      <Ionicons name="close" size={20} color={Colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.imageUrlInputLabel}>IMAGE LINK</Text>
+                  <TextInput
+                    style={styles.imageUrlModalInput}
+                    value={image}
+                    onChangeText={(value) => { setImage(value); setImageUrlCopied(false); }}
+                    placeholder="Paste image URL here"
+                    placeholderTextColor={Colors.muted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="url"
+                    multiline
+                    textAlignVertical="top"
+                  />
+                  <TouchableOpacity
+                    style={styles.imageUrlCopyButton}
+                    activeOpacity={0.84}
+                    disabled={!image.trim()}
+                    onPress={async () => {
+                      try {
+                        await Clipboard.setStringAsync(image.trim());
+                        setImageUrlCopied(true);
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      } catch {
+                        Alert.alert("Copy failed", "The image URL could not be copied. Please try again.");
+                      }
+                    }}
+                  >
+                    <LinearGradient
+                      colors={imageUrlCopied ? ["#1F9D62", "#16834F"] : [Colors.primary, Colors.accent]}
+                      style={styles.imageUrlCopyGradient}
+                    >
+                      <Ionicons name={imageUrlCopied ? "checkmark-circle-outline" : "copy-outline"} size={18} color="#FFFFFF" />
+                      <Text style={styles.imageUrlCopyText}>{imageUrlCopied ? "Copied to clipboard" : "Copy URL"}</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </BlurView>
+            </Animated.View>
+          </View>
+        </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -972,6 +1080,176 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 3,
   },
+
+  // Frosted liquid-glass additional details panel
+  additionalGlassWrap: {
+    marginTop: 4,
+    marginBottom: 20,
+    borderRadius: 26,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 22,
+    elevation: 7,
+  },
+  additionalGlass: {
+    borderRadius: 26,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.92)",
+    backgroundColor: "rgba(255,255,255,0.68)",
+  },
+  additionalGlassSheen: {
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.48)",
+    borderRadius: 26,
+  },
+  additionalGlassHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 18,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(100,116,139,0.14)",
+  },
+  additionalGlassIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.76)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.95)",
+  },
+  additionalGlassHeading: { flex: 1 },
+  additionalGlassTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    letterSpacing: -0.3,
+  },
+  additionalGlassSubtitle: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 3,
+  },
+
+  imageUrlSection: { marginBottom: 8 },
+  imageUrlTrigger: {
+    minHeight: 64,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.95)",
+    backgroundColor: "rgba(245,247,250,0.78)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
+  },
+  imageUrlTriggerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageUrlTriggerTextWrap: { flex: 1 },
+  imageUrlTriggerTitle: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
+  imageUrlTriggerSubtitle: { fontSize: 11, color: Colors.muted, marginTop: 3 },
+  imageUrlModalRoot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 22,
+    backgroundColor: "rgba(20,25,35,0.16)",
+  },
+  imageUrlModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  imageUrlModalCard: {
+    width: "100%",
+    maxWidth: 520,
+    borderRadius: 28,
+    shadowColor: "#263449",
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.2,
+    shadowRadius: 28,
+    elevation: 18,
+  },
+  imageUrlModalGlass: {
+    borderRadius: 28,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.96)",
+    backgroundColor: "rgba(255,255,255,0.76)",
+  },
+  imageUrlModalContent: {
+    padding: 20,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.7)",
+  },
+  imageUrlModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    gap: 11,
+  },
+  imageUrlModalIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.96)",
+  },
+  imageUrlModalHeading: { flex: 1 },
+  imageUrlModalTitle: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary },
+  imageUrlModalSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 3 },
+  imageUrlCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.84)",
+  },
+  imageUrlInputLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
+    color: Colors.muted,
+    marginBottom: 8,
+  },
+  imageUrlModalInput: {
+    minHeight: 104,
+    maxHeight: 180,
+    padding: 13,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.25)",
+    backgroundColor: "rgba(255,255,255,0.76)",
+    color: Colors.textPrimary,
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 16,
+  },
+  imageUrlCopyButton: { borderRadius: 15, overflow: "hidden" },
+  imageUrlCopyGradient: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 9,
+  },
+  imageUrlCopyText: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
 
   // Frosted liquid-glass inventory panel
   inventoryGlassWrap: {
