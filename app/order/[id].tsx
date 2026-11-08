@@ -224,6 +224,9 @@ export default function OrderDetails() {
   const { id } = useLocalSearchParams();
   const [order, setOrder] = useState<any>(null);
   const [showPinModal, setShowPinModal]=useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [isRejecting, setIsRejecting] = useState(false);
   const[enteredPin, setEnteredPin]=useState("");
   const[verifyingPin, setVerifyingPin]=useState(false);
   const insets = useSafeAreaInsets();
@@ -314,6 +317,98 @@ export default function OrderDetails() {
     } catch (e) {
       console.log(e);
       Alert.alert("Error", "Failed to update order status");
+    }
+  };
+
+  const confirmRejection = async () => {
+    const reason = rejectionReason.trim();
+
+    if (!reason) {
+      Alert.alert("Reason required", "Please enter a reason for rejecting this order.");
+      return;
+    }
+
+    if (!order || order.status !== "Pending") {
+      Alert.alert("Unable to reject", "Only pending orders can be rejected.");
+      return;
+    }
+
+    setIsRejecting(true);
+    try {
+      await updateDoc(doc(db, "orders", id as string), {
+        status: "Cancelled",
+        cancellationReason: reason,
+        cancelledAt: new Date(),
+        cancellationSource: "admin",
+      });
+
+      setShowRejectModal(false);
+      setRejectionReason("");
+      Alert.alert(
+        "Order cancelled",
+        "The cancellation reason has been saved. You can now notify the customer through WhatsApp and Email."
+      );
+    } catch (error) {
+      console.error("ORDER REJECTION ERROR:", error);
+      Alert.alert("Error", "Unable to reject this order. Please try again.");
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
+  const getCancellationMessage = () => {
+    const customerName = order?.customerName || "Customer";
+    const orderCode = order?.id?.slice(0, 8).toUpperCase() || "";
+    const reason = order?.cancellationReason || rejectionReason.trim();
+
+    return `Hello ${customerName},
+
+Greetings from BonMart!
+
+We regret to inform you that your recent order #${orderCode} has been cancelled.
+
+Reason for cancellation:
+${reason}
+
+We sincerely apologise for the inconvenience. If you need any assistance or would like clarification, please feel free to reply to this message.
+
+Thank you for your understanding.
+
+Warm regards,
+Team BonMart`;
+  };
+
+  const notifyViaWhatsApp = async () => {
+    const rawPhone = order?.customerPhone || order?.address?.phone || "";
+    let phone = String(rawPhone).replace(/\\D/g, "");
+
+    if (phone.length === 10) phone = `91${phone}`;
+    if (phone.length < 10) {
+      Alert.alert("Phone number unavailable", "No valid customer phone number is saved for this order.");
+      return;
+    }
+
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(getCancellationMessage())}`;
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      Alert.alert("Unable to open WhatsApp", "Please check that WhatsApp is installed or try again.");
+    }
+  };
+
+  const notifyViaEmail = async () => {
+    const email = String(order?.customerEmail || "").trim();
+    if (!email) {
+      Alert.alert("Email unavailable", "No customer email address is saved for this order.");
+      return;
+    }
+
+    const subject = `Update about your BonMart order #${order.id.slice(0, 8).toUpperCase()}`;
+    const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(getCancellationMessage())}`;
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      Alert.alert("Unable to open email", "No email app is available on this device.");
     }
   };
 
@@ -517,25 +612,55 @@ export default function OrderDetails() {
               <Text style={styles.deliveredText}>Order delivered successfully</Text>
             </Animated.View>
           ) : nextStatus ? (
-            <Animated.View entering={FadeInUp.delay(350).springify()}>
-              <TouchableOpacity
-                style={styles.nextStatusBtn}
-                onPress={() => updateStatus(nextStatus)}
-                activeOpacity={0.85}
-              >
-                <LinearGradient
-                  colors={[Colors.primary, Colors.accent]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.nextStatusGrad}
+            <View style={{ gap: 10 }}>
+              <Animated.View entering={FadeInUp.delay(350).springify()}>
+                <TouchableOpacity
+                  style={styles.nextStatusBtn}
+                  onPress={() => updateStatus(nextStatus)}
+                  activeOpacity={0.85}
                 >
-                  <Ionicons name="arrow-forward-circle-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
-                  <Text style={styles.nextStatusText}>Mark as {nextStatus}</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </Animated.View>
+                  <LinearGradient
+                    colors={[Colors.primary, Colors.accent]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.nextStatusGrad}
+                  >
+                    <Ionicons name="arrow-forward-circle-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
+                    <Text style={styles.nextStatusText}>Mark as {nextStatus}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
+              {order.status === "Pending" && (
+                <TouchableOpacity
+                  style={styles.rejectOrderBtn}
+                  onPress={() => setShowRejectModal(true)}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="close-circle-outline" size={19} color={Colors.danger} />
+                  <Text style={styles.rejectOrderText}>Reject Order</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           ) : null}
         </Animated.View>
+
+        {isCancelled && order.cancellationReason ? (
+          <InfoCard icon="alert-circle-outline" iconColor={Colors.danger} label="Cancellation & Customer Notification" delay={140}>
+            <Text style={styles.rejectionReasonLabel}>Reason recorded</Text>
+            <Text style={styles.rejectionReasonText}>{order.cancellationReason}</Text>
+            <Text style={styles.notificationHint}>
+              Open a pre-filled message to notify the customer. Review it and press Send in the selected app.
+            </Text>
+            <TouchableOpacity style={styles.whatsappNotifyBtn} onPress={notifyViaWhatsApp} activeOpacity={0.85}>
+              <Ionicons name="logo-whatsapp" size={19} color="#FFFFFF" />
+              <Text style={styles.notifyButtonText}>Notify via WhatsApp</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.emailNotifyBtn} onPress={notifyViaEmail} activeOpacity={0.85}>
+              <Ionicons name="mail-outline" size={19} color={Colors.primary} />
+              <Text style={styles.emailNotifyButtonText}>Notify via Email</Text>
+            </TouchableOpacity>
+          </InfoCard>
+        ) : null}
 
         {order.status==="Out For Delivery" && (
           <TouchableOpacity style={styles.printBtn}
@@ -654,6 +779,78 @@ export default function OrderDetails() {
         </Animated.View>
         <View style={{ height: 40 }} />
       </ScrollView>
+
+     <Modal
+  visible={showRejectModal}
+  transparent
+  animationType="slide"
+  onRequestClose={() => {
+    if (!isRejecting) {
+      setShowRejectModal(false);
+      setRejectionReason("");
+    }
+  }}
+>
+  <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === "ios" ? "padding" : "height"}
+  >
+    <View style={styles.rejectModalOverlay}>
+      <View style={[styles.rejectModalCard, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+        <View style={styles.rejectModalHandle} />
+        <Text style={styles.rejectModalTitle}>Reject this order?</Text>
+        <Text style={styles.rejectModalDescription}>
+          Enter a clear reason. This will be saved with the order, and you can notify the customer through WhatsApp and Email.
+        </Text>
+
+        <TextInput
+          value={rejectionReason}
+          onChangeText={setRejectionReason}
+          placeholder="Enter reason for rejection..."
+          placeholderTextColor={Colors.muted}
+          multiline
+          maxLength={500}
+          textAlignVertical="top"
+          editable={!isRejecting}
+          style={styles.rejectionInput}
+        />
+        <Text style={styles.characterCount}>{rejectionReason.length}/500</Text>
+
+        <View style={styles.messagePreview}>
+          <Text style={styles.messagePreviewTitle}>MESSAGE PREVIEW</Text>
+          <Text style={styles.messagePreviewText}>
+            {rejectionReason.trim()
+              ? getCancellationMessage()
+              : "Your message preview will appear here once you enter a reason."}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.confirmRejectBtn, (!rejectionReason.trim() || isRejecting) && styles.disabledRejectBtn]}
+          onPress={confirmRejection}
+          disabled={!rejectionReason.trim() || isRejecting}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="close-circle-outline" size={19} color="#FFFFFF" />
+          <Text style={styles.confirmRejectText}>
+            {isRejecting ? "Cancelling order..." : "Confirm Rejection"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.keepOrderBtn}
+          onPress={() => {
+            setShowRejectModal(false);
+            setRejectionReason("");
+          }}
+          disabled={isRejecting}
+        >
+          <Text style={styles.keepOrderText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </KeyboardAvoidingView>
+</Modal>
 
      <Modal
   visible={showPinModal}
@@ -818,6 +1015,30 @@ headerMetaRow: ViewStyle;
   nextStatusBtn: ViewStyle;
   nextStatusGrad: ViewStyle;
   nextStatusText: TextStyle;
+  rejectOrderBtn: ViewStyle;
+  rejectOrderText: TextStyle;
+  rejectionReasonLabel: TextStyle;
+  rejectionReasonText: TextStyle;
+  notificationHint: TextStyle;
+  whatsappNotifyBtn: ViewStyle;
+  emailNotifyBtn: ViewStyle;
+  notifyButtonText: TextStyle;
+  emailNotifyButtonText: TextStyle;
+  rejectModalOverlay: ViewStyle;
+  rejectModalCard: ViewStyle;
+  rejectModalHandle: ViewStyle;
+  rejectModalTitle: TextStyle;
+  rejectModalDescription: TextStyle;
+  rejectionInput: TextStyle;
+  characterCount: TextStyle;
+  messagePreview: ViewStyle;
+  messagePreviewTitle: TextStyle;
+  messagePreviewText: TextStyle;
+  confirmRejectBtn: ViewStyle;
+  disabledRejectBtn: ViewStyle;
+  confirmRejectText: TextStyle;
+  keepOrderBtn: ViewStyle;
+  keepOrderText: TextStyle;
   infoRow: ViewStyle;
   infoKey: TextStyle;
   infoValue: TextStyle;
@@ -1093,6 +1314,171 @@ headerMetaRow: {
     color: "#fff", 
     fontSize: 15, 
     fontWeight: "600" 
+  },
+
+  rejectOrderBtn: {
+    minHeight: 50,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.danger + "55",
+    backgroundColor: Colors.danger + "08",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  rejectOrderText: {
+    color: Colors.danger,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  rejectionReasonLabel: {
+    color: Colors.muted,
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 5,
+  },
+  rejectionReasonText: {
+    color: Colors.textPrimary,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  notificationHint: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  whatsappNotifyBtn: {
+    minHeight: 48,
+    borderRadius: Radius.lg,
+    backgroundColor: "#25D366",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 9,
+    marginBottom: 9,
+  },
+  emailNotifyBtn: {
+    minHeight: 48,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 9,
+  },
+  notifyButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  emailNotifyButtonText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  rejectModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  rejectModalCard: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    padding: 22,
+    maxHeight: "92%",
+  },
+  rejectModalHandle: {
+    alignSelf: "center",
+    width: 44,
+    height: 5,
+    borderRadius: 5,
+    backgroundColor: "#DDDDDD",
+    marginBottom: 18,
+  },
+  rejectModalTitle: {
+    fontSize: 21,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    textAlign: "center",
+  },
+  rejectModalDescription: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    marginTop: 7,
+    marginBottom: 16,
+  },
+  rejectionInput: {
+    minHeight: 92,
+    maxHeight: 130,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    borderRadius: Radius.lg,
+    padding: 13,
+    fontSize: 14,
+    color: Colors.textPrimary,
+    backgroundColor: "#FAFAFA",
+  },
+  characterCount: {
+    textAlign: "right",
+    color: Colors.muted,
+    fontSize: 11,
+    marginTop: 5,
+  },
+  messagePreview: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: 13,
+    marginTop: 12,
+    marginBottom: 16,
+    maxHeight: 155,
+  },
+  messagePreviewTitle: {
+    color: Colors.muted,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    marginBottom: 7,
+  },
+  messagePreviewText: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  confirmRejectBtn: {
+    minHeight: 52,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.danger,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  disabledRejectBtn: {
+    opacity: 0.45,
+  },
+  confirmRejectText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  keepOrderBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 13,
+    marginTop: 4,
+  },
+  keepOrderText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontWeight: "600",
   },
 
   infoRow: {
