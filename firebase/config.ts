@@ -1,11 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { initializeApp } from "firebase/app";
-import {
-  getReactNativePersistence,
-  initializeAuth,
-} from "firebase/auth";
+import { initializeAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+
+// @ts-ignore Firebase 12 React Native export is missing from public declarations.
+import { getReactNativePersistence } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBD3KJ4C9EzTL9HZZRqGFmCBYbgLnUKc8E",

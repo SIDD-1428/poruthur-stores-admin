@@ -5,10 +5,8 @@ import {
   isBluetoothEnabled,
   Printer,
 } from "expo-bluetooth-thermal-printer";
-import React, { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
-import * as UPNG from "upng-js";
-import { db } from "../firebase/config";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -21,10 +19,23 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import * as UPNG from "upng-js";
+import { db } from "../firebase/config";
+import {
+  HEADER_TEXT_HEIGHT,
+  HEADER_TEXT_HEX,
+  HEADER_TEXT_WIDTH,
+} from "./receiptHeaderBitmap";
 
 const STORAGE_KEY = "bonmart.thermalPrinter.selected.v1";
 const PAPER_WIDTH = "80mm";
 const LINE_WIDTH = 48;
+const PAPER_DOTS = 576; // printable width of an 80 mm printer, in dots
+const QR_SIZE = 160; // QR width and height in dots (about 20 mm). Smaller is harder to scan.
+const BAND_ROWS = 32; // image rows sent to the printer at a time
+
+const waitMs = (milliseconds: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
 type PrinterDevice = {
   name?: string;
@@ -70,39 +81,117 @@ const tableRow = (item: string, unit: string, qty: string, amount: string) =>
   qty.slice(0, 6).padEnd(6) +
   amount.slice(0, 16).padStart(16);
 
-const printQrBitmap = async (printer: any, imageUrl: string) => {
+const hexToBytes = (hex: string) => {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+  }
+  return bytes;
+};
+
+// Downloads the QR image and shrinks it to QR_SIZE x QR_SIZE.
+// Returns one value per pixel: 1 = black, 0 = white.
+const loadQrPixels = async (imageUrl: string) => {
   const response = await fetch(imageUrl);
   if (!response.ok) throw new Error("Unable to download the payment QR image.");
   const buffer = await response.arrayBuffer();
-  const decoded = UPNG.decode(buffer);
+
+  let decoded: any;
+  try {
+    decoded = UPNG.decode(buffer);
+  } catch {
+    throw new Error("The payment QR image must be a PNG file.");
+  }
+
   const rgba = new Uint8Array(UPNG.toRGBA8(decoded)[0]);
   const sourceWidth = decoded.width as number;
   const sourceHeight = decoded.height as number;
-  const targetWidth = Math.min(384, sourceWidth);
-  const targetHeight = Math.max(1, Math.round((sourceHeight / sourceWidth) * targetWidth));
-  const bytesPerRow = Math.ceil(targetWidth / 8);
-  const raster = new Uint8Array(bytesPerRow * targetHeight);
+  const scale = QR_SIZE / Math.max(sourceWidth, sourceHeight);
+  const targetWidth = Math.max(1, Math.round(sourceWidth * scale));
+  const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
+  const offsetX = Math.floor((QR_SIZE - targetWidth) / 2);
+  const offsetY = Math.floor((QR_SIZE - targetHeight) / 2);
+  const pixels = new Uint8Array(QR_SIZE * QR_SIZE);
 
   for (let y = 0; y < targetHeight; y++) {
-    const sourceY = Math.min(sourceHeight - 1, Math.floor((y * sourceHeight) / targetHeight));
+    const startY = Math.floor((y * sourceHeight) / targetHeight);
+    const endY = Math.max(startY + 1, Math.floor(((y + 1) * sourceHeight) / targetHeight));
     for (let x = 0; x < targetWidth; x++) {
-      const sourceX = Math.min(sourceWidth - 1, Math.floor((x * sourceWidth) / targetWidth));
-      const offset = (sourceY * sourceWidth + sourceX) * 4;
-      const luminance =
-        0.299 * rgba[offset] + 0.587 * rgba[offset + 1] + 0.114 * rgba[offset + 2];
-      if (luminance < 160) raster[y * bytesPerRow + (x >> 3)] |= 0x80 >> (x & 7);
+      const startX = Math.floor((x * sourceWidth) / targetWidth);
+      const endX = Math.max(startX + 1, Math.floor(((x + 1) * sourceWidth) / targetWidth));
+
+      // Average the source pixels that fall inside this one printed dot
+      let total = 0;
+      let count = 0;
+      for (let sy = startY; sy < endY && sy < sourceHeight; sy++) {
+        for (let sx = startX; sx < endX && sx < sourceWidth; sx++) {
+          const offset = (sy * sourceWidth + sx) * 4;
+          const alpha = rgba[offset + 3] / 255;
+          const luminance =
+            0.299 * rgba[offset] + 0.587 * rgba[offset + 1] + 0.114 * rgba[offset + 2];
+          // Transparent pixels count as white paper
+          total += luminance * alpha + 255 * (1 - alpha);
+          count++;
+        }
+      }
+      if (count > 0 && total / count < 140) {
+        pixels[(y + offsetY) * QR_SIZE + (x + offsetX)] = 1;
+      }
+    }
+  }
+  return pixels;
+};
+
+// Prints the header as ONE image: shop text on the left, QR on the right.
+// qrPixels can be null, then the right side is left empty.
+const printHeaderBitmap = async (printer: any, qrPixels: Uint8Array | null) => {
+  const textBytes = hexToBytes(HEADER_TEXT_HEX);
+  const textBytesPerRow = HEADER_TEXT_WIDTH / 8;
+  const headerHeight = Math.max(HEADER_TEXT_HEIGHT, QR_SIZE);
+  const textOffsetY = Math.floor((headerHeight - HEADER_TEXT_HEIGHT) / 2);
+  const qrOffsetY = Math.floor((headerHeight - QR_SIZE) / 2);
+  const qrOffsetX = PAPER_DOTS - QR_SIZE;
+  const bytesPerRow = PAPER_DOTS / 8;
+  const raster = new Uint8Array(bytesPerRow * headerHeight);
+
+  const setDot = (x: number, y: number) => {
+    raster[y * bytesPerRow + (x >> 3)] |= 0x80 >> (x & 7);
+  };
+
+  // Shop text on the left
+  for (let y = 0; y < HEADER_TEXT_HEIGHT; y++) {
+    for (let x = 0; x < HEADER_TEXT_WIDTH; x++) {
+      const isBlack = textBytes[y * textBytesPerRow + (x >> 3)] & (0x80 >> (x & 7));
+      if (isBlack) setDot(x, y + textOffsetY);
     }
   }
 
-  const header = new Uint8Array([
-    0x1d, 0x76, 0x30, 0x00,
-    bytesPerRow & 0xff, (bytesPerRow >> 8) & 0xff,
-    targetHeight & 0xff, (targetHeight >> 8) & 0xff,
-  ]);
-  const command = new Uint8Array(header.length + raster.length);
-  command.set(header, 0);
-  command.set(raster, header.length);
-  await printer.raw(command);
+  // QR on the right
+  if (qrPixels) {
+    for (let y = 0; y < QR_SIZE; y++) {
+      for (let x = 0; x < QR_SIZE; x++) {
+        if (qrPixels[y * QR_SIZE + x]) setDot(x + qrOffsetX, y + qrOffsetY);
+      }
+    }
+  }
+
+  // Send the image in small bands so the printer buffer is never flooded
+  for (let startRow = 0; startRow < headerHeight; startRow += BAND_ROWS) {
+    const rows = Math.min(BAND_ROWS, headerHeight - startRow);
+    const band = raster.slice(startRow * bytesPerRow, (startRow + rows) * bytesPerRow);
+    const command = new Uint8Array(8 + band.length);
+    command.set(
+      [
+        0x1d, 0x76, 0x30, 0x00,
+        bytesPerRow & 0xff, (bytesPerRow >> 8) & 0xff,
+        rows & 0xff, (rows >> 8) & 0xff,
+      ],
+      0
+    );
+    command.set(band, 8);
+    await printer.raw(command);
+    await waitMs(30);
+  }
 };
 
 const twoColumnLine = (left: string, right: string) => {
@@ -262,6 +351,37 @@ export default function ThermalReceiptPrinter({ order }: Props) {
         order.invoice?.number ?? `PSINV-${String(order.id).slice(0, 8).toUpperCase()}`;
       const orderDate = formatOrderDate(order.invoice?.issuedAt ?? order.createdAt);
       const items = Array.isArray(order.items) ? order.items : [];
+
+      // Fetch units from the products collection using each order item's productId.
+// Fetch each unique product only once.
+const productIds: string[] = Array.from(
+  new Set<string>(
+    items
+      .map((item: any): string => String(item.productId ?? "").trim())
+      .filter((id: string) => id.length > 0)
+  )
+);
+
+const productUnitEntries = await Promise.all(
+  productIds.map(async (productId: string) => {
+    try {
+      const productSnapshot = await getDoc(doc(db, "products", productId));
+
+      const unit = productSnapshot.exists()
+        ? String(productSnapshot.data()?.unit ?? "").trim()
+        : "";
+
+      return [productId, unit] as const;
+    } catch (error) {
+      console.warn(`Unable to fetch unit for product ${productId}`, error);
+      return [productId, ""] as const;
+    }
+  })
+);
+
+const productUnits = new Map<string, string>(productUnitEntries);
+
+
       const subtotal = order.pricing?.subtotal ?? order.total ?? 0;
       const delivery = order.pricing?.deliveryCharge ?? 0;
       const tax = order.pricing?.tax ?? 0;
@@ -276,27 +396,20 @@ export default function ThermalReceiptPrinter({ order }: Props) {
         console.warn("Unable to fetch store payment QR", qrError);
       }
 
-      await printer.alignLeft();
-      await printer.bold(true);
-      await printer.setSize("double");
-      await printer.print("BONMART");
-      await printer.setSize("normal");
-      await printer.bold(false);
+      let qrPixels: Uint8Array | null = null;
+      let qrFailed = false;
       if (paymentQrUrl) {
         try {
-          await printQrBitmap(printer, paymentQrUrl);
-          await printer.println("");
+          qrPixels = await loadQrPixels(paymentQrUrl);
         } catch (qrError) {
-          console.warn("Unable to print payment QR", qrError);
-          await printer.println("");
-          await printer.println("[Payment QR unavailable]");
+          console.warn("Unable to load payment QR", qrError);
+          qrFailed = true;
         }
-      } else {
-        await printer.println("");
       }
-      await printer.println("Shop Good, Live Good");
-      await printer.println("Abbigere, Bengaluru");
-      await printer.println("+91 80507 80381");
+
+      await printer.alignLeft();
+      await printHeaderBitmap(printer, qrPixels);
+      if (qrFailed) await printer.println("[Payment QR unavailable]");
       await printer.separator("=");
 
       await printer.alignLeft();
@@ -330,16 +443,32 @@ export default function ThermalReceiptPrinter({ order }: Props) {
       await printer.println(tableRow("Item", "Unit", "Qty", "Amount"));
       await printer.separator("-");
       for (const item of items) {
-        const quantity = Number(item.quantity ?? 0);
-        const unitPrice = Number(item.unitPrice ?? item.price ?? 0);
-        const lineTotal = Number(item.totalPrice ?? unitPrice * quantity);
-        const itemLines = wrapText(String(item.name ?? "Item"), 20);
-        await printer.println(
-          tableRow(itemLines[0] ?? "Item", String(item.unit ?? "-"), String(quantity), money(lineTotal))
-        );
+  const quantity = Number(item.quantity ?? 0);
+  const unitPrice = Number(item.unitPrice ?? item.price ?? 0);
+  const lineTotal = Number(item.totalPrice ?? unitPrice * quantity);
+
+  const productId = String(item.productId ?? "").trim();
+
+  // Prefer the unit saved in the order; otherwise use Firestore product data.
+  const unit =
+    String(item.unit ?? "").trim() ||
+    productUnits.get(productId) ||
+    "-";
+
+  const itemLines = wrapText(String(item.name ?? "Item"), 20);
+
+  await printer.println(
+    tableRow(
+      itemLines[0] ?? "Item",
+      unit,
+      String(quantity),
+      money(lineTotal)
+    )
+  );
         for (const continuation of itemLines.slice(1)) {
           await printer.println(tableRow(continuation, "", "", ""));
         }
+        await waitMs(60);
       }
       await printer.separator("-");
 
@@ -368,6 +497,9 @@ export default function ThermalReceiptPrinter({ order }: Props) {
       await printer.println("with BonMart!");
       await printer.feed(4);
       await printer.cut();
+
+      // Give the printer time to finish printing what is still in its buffer
+      await waitMs(2000 + items.length * 150);
 
       Alert.alert("Print sent", "The thermal receipt has been sent to the printer.");
     } catch (error: any) {
