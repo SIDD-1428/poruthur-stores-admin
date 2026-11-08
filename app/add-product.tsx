@@ -195,7 +195,7 @@ console.log(
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         "Missing Information",
-        "Please fill all required fields:\n• Product Name\n• MRP (must be ≥ Selling Price)\n• Selling Price\n• Image\n• Category${productType === "branded" ? "\n• Brand" : ""}"
+        `Please fill all required fields:\n• Product Name\n• MRP (must be ≥ Selling Price)\n• Selling Price\n• Image\n• Category${productType === "branded" ? "\n• Brand" : ""}`
       );
       return;
     }
