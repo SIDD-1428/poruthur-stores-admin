@@ -441,7 +441,9 @@ const productUnits = new Map<string, string>(productUnitEntries);
       await printer.bold(true);
       await printer.println("ORDER DETAILS");
       await printer.bold(false);
+      await printer.bold(true);
       await printer.println(tableRow("Item", "Unit", "Qty", "Amount"));
+      await printer.bold(false);
       await printer.separator("-");
       for (const item of items) {
   const quantity = Number(item.quantity ?? 0);
