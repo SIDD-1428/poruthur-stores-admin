@@ -93,6 +93,7 @@ export default function EditProductScreen() {
 
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+  const [mrp, setMrp] = useState("");
   const [image, setImage] = useState("");
   const [protext, setProtext] = useState("");
   const [category, setCategory] = useState("");
@@ -133,7 +134,8 @@ export default function EditProductScreen() {
       if (snap.exists()) {
         const data = snap.data();
         setName(data.name || "");
-        setPrice(String(data.price || ""));
+        setPrice(String(data.price ?? ""));
+        setMrp(String(data.mrp ?? data.price ?? ""));
         setStock(String(data.stock || 0));
         setImage(data.image || "");
         setProtext(data.protext || "");
@@ -254,11 +256,11 @@ export default function EditProductScreen() {
   };
 
   const updateProduct = async () => {
-    if (!name || !price || !category) {
+    if (!name || !price || !mrp || !category || Number(mrp) < Number(price)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         "Missing Information",
-        "Please fill all required fields:\n• Product Name\n• Price\n• Category"
+        "Please fill all required fields:\n• Product Name\n• MRP (must be ≥ Selling Price)\n• Selling Price\n• Category"
       );
       return;
     }
@@ -267,6 +269,7 @@ export default function EditProductScreen() {
     try {
       await updateDoc(doc(db, "products", id as string), {
         name,
+        mrp: Number(mrp),
         price: Number(price),
         stock: Number(stock) || 0,
         image,
@@ -400,11 +403,19 @@ export default function EditProductScreen() {
             required
           />
           <InputField
+            icon="pricetag-outline"
+            placeholder="MRP *"
+            value={mrp}
+            onChangeText={setMrp}
+            keyboardType="decimal-pad"
+            required
+          />
+          <InputField
             icon="currency-inr"
-            placeholder="Price *"
+            placeholder="Selling Price *"
             value={price}
             onChangeText={setPrice}
-            keyboardType="numeric"
+            keyboardType="decimal-pad"
             required
           />
           
