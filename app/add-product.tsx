@@ -80,6 +80,7 @@ const InputField = ({
 export default function AddProductScreen() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+  const [mrp, setMrp] = useState("");
   const [image, setImage] = useState("");
   const [protext, setProtext] = useState("");
   const [rating, setRating] = useState("");
@@ -178,11 +179,11 @@ console.log(
   };
 
   const saveProduct = async () => {
-    if (!name || !price || !image || !category) {
+    if (!name || !price || !mrp || !image || !category || Number(mrp) < Number(price)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         "Missing Information",
-        "Please fill all required fields:\n• Product Name\n• Price\n• Image\n• Category"
+        "Please fill all required fields:\n• Product Name\n• MRP (must be ≥ Selling Price)\n• Selling Price\n• Image\n• Category"
       );
       return;
     }
@@ -191,6 +192,7 @@ console.log(
     try{
       await addDoc(collection(db, "products"), {
         name,
+        mrp: Number(mrp),
         price: Number(price),
         image,
         protext: protext || "",
@@ -371,11 +373,19 @@ console.log(
             required
           />
           <InputField
+            icon="pricetag-outline"
+            placeholder="MRP *"
+            value={mrp}
+            onChangeText={setMrp}
+            keyboardType="decimal-pad"
+            required
+          />
+          <InputField
             icon="currency-inr"
-            placeholder="Price *"
+            placeholder="Selling Price *"
             value={price}
             onChangeText={setPrice}
-            keyboardType="numeric"
+            keyboardType="decimal-pad"
             required
           />
           

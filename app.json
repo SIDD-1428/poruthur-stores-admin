@@ -8,11 +8,9 @@
     "scheme": "poruthurstoresadmin",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-
     "ios": {
       "supportsTablet": true
     },
-
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -20,31 +18,28 @@
         "backgroundImage": "./assets/images/icon.png",
         "monochromeImage": "./assets/images/icon.png"
       },
-
       "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false,
-
       "package": "com.sidd1428.poruthurstoresadmin",
-
       "permissions": [
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN"
       ],
-
       "googleServicesFile": "./google-services.json",
-
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyBmgts88gypeqkoFASTsU74ln0VFQjQvv4"
         }
       }
     },
-
     "web": {
       "output": "static",
       "favicon": "./assets/images/icon.png"
     },
-
     "plugins": [
       "expo-router",
       "expo-notifications",
@@ -62,20 +57,16 @@
         }
       ]
     ],
-    
-
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
-
     "extra": {
       "router": {},
       "eas": {
         "projectId": "3416d94a-2936-40c0-a20a-970f1121fd31"
       }
     },
-
     "owner": "sidd1428"
   }
 }
