@@ -51,7 +51,8 @@
     "react-native-svg": "15.12.1",
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.5.1",
-    "react-use-confirming-dialog": "^1.0.2"
+    "react-use-confirming-dialog": "^1.0.2",
+    "upng-js": "^2.1.0"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
