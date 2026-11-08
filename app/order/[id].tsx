@@ -397,61 +397,79 @@ export default function OrderDetails() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Animated.View entering={FadeInDown.delay(40).springify()} style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={22} color={Colors.primary} />
-        </TouchableOpacity>
-        
-        <View style={styles.headerCenter}>
-          <Text style={styles.title}>Order Details</Text>
-          <Text style={styles.orderId}>#{order.id.slice(0, 8).toUpperCase()}</Text>
-        </View>
-        
-        <View style={styles.headerRight}>
-          <View style={[styles.statusPill, { backgroundColor: statusColor + "15", borderColor: statusColor + "40" }]}>
-            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-            <Text style={[styles.statusPillText, { color: statusColor }]}>{order.status}</Text>
-          </View>
+      <Animated.View
+  entering={FadeInDown.delay(40).springify()}
+  style={styles.header}
+>
+  {/* Top row: Back button and order details */}
+  <View style={styles.headerTopRow}>
+    <TouchableOpacity
+      onPress={() => router.back()}
+      style={styles.backBtn}
+    >
+      <Ionicons name="chevron-back" size={22} color={Colors.primary} />
+    </TouchableOpacity>
 
-          <View
-            style={[
-              styles.paymentBadge,
+    <View style={styles.headerCenter}>
+      <Text style={styles.title}>Order Details</Text>
+      <Text style={styles.orderId}>
+        #{order.id.slice(0, 8).toUpperCase()}
+      </Text>
+    </View>
+  </View>
+
+  {/* Bottom row: Status and payment */}
+  <View style={styles.headerMetaRow}>
+    <View
+      style={[
+        styles.statusPill,
+        {
+          backgroundColor: statusColor + "15",
+          borderColor: statusColor + "40",
+        },
+      ]}
+    >
+      <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+      <Text style={[styles.statusPillText, { color: statusColor }]}>
+        {order.status}
+      </Text>
+    </View>
+
+    <View
+      style={[
+        styles.paymentBadge,
+        order.payment?.method === "QR Payment"
+          ? styles.qrPaymentBadge
+          : styles.codPaymentBadge,
+      ]}
+    >
+      <Ionicons
+        name={
+          order.payment?.method === "QR Payment"
+            ? "qr-code-outline"
+            : "cash-outline"
+        }
+        size={13}
+        color={order.payment?.method === "QR Payment" ? "#5856D6" : "#34C759"}
+      />
+      <Text
+        style={[
+          styles.paymentBadgeText,
+          {
+            color:
               order.payment?.method === "QR Payment"
-                ? styles.qrPaymentBadge
-                : styles.codPaymentBadge,
-            ]}
-          >
-            <Ionicons
-              name={
-                order.payment?.method === "QR Payment"
-                  ? "qr-code-outline"
-                  : "cash-outline"
-              }
-              size={12}
-              color={
-                order.payment?.method === "QR Payment"
-                  ? "#5856D6"
-                  : "#34C759"
-              }
-            />
-            <Text
-              style={[
-                styles.paymentBadgeText,
-                {
-                  color:
-                    order.payment?.method === "QR Payment"
-                      ? "#5856D6"
-                      : "#34C759",
-                },
-              ]}
-            >
-              {order.payment?.method === "QR Payment"
-                ? "QR Payment"
-                : "Cash on Delivery"}
-            </Text>
-          </View>
-        </View>
-      </Animated.View>
+                ? "#5856D6"
+                : "#34C759",
+          },
+        ]}
+      >
+        {order.payment?.method === "QR Payment"
+          ? "QR Payment"
+          : "Cash on Delivery"}
+      </Text>
+    </View>
+  </View>
+</Animated.View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <Animated.View entering={FadeInDown.delay(100).springify().damping(18)} style={styles.stepperCard}>
@@ -770,6 +788,8 @@ export default function OrderDetails() {
 }
 
 type MainStyles = {
+  headerTopRow: ViewStyle;
+headerMetaRow: ViewStyle;
   container: ViewStyle;
   loadingContainer: ViewStyle;
   loadingInner: ViewStyle;
@@ -777,7 +797,6 @@ type MainStyles = {
   loadingText: TextStyle;
   header: ViewStyle;
   headerCenter: ViewStyle;
-  headerRight: ViewStyle;
   backBtn: ViewStyle;
   title: TextStyle;
   orderId: TextStyle;
@@ -902,27 +921,33 @@ const styles = StyleSheet.create<MainStyles>({
   },
 
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    gap: 10,
-    backgroundColor: Colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.separator,
-  },
+  flexDirection: "column",
+  paddingHorizontal: Spacing.lg,
+  paddingTop: Spacing.sm,
+  paddingBottom: Spacing.md,
+  gap: 12,
+  backgroundColor: Colors.background,
+  borderBottomWidth: 1,
+  borderBottomColor: Colors.separator,
+},
 
-  headerCenter: {
-    flex: 1,
-    marginRight: 8,
-  },
+headerTopRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 12,
+},
 
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexShrink: 1,
-  },
+headerCenter: {
+  flex: 1,
+},
+
+headerMetaRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 10,
+  paddingLeft: 52,
+  flexWrap: "wrap",
+},
   
   backBtn: {
     width: 40, 
