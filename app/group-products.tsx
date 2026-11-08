@@ -25,7 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
+import Animated, { FadeInRight } from "react-native-reanimated";
 import { db } from "../firebase/config";
 
 const Colors = {
@@ -214,7 +214,10 @@ export default function GroupProductsScreen() {
 
         productSnapshots.forEach((snapshot, index) => {
           if (!snapshot.exists()) {
-            throw new Error("One of the selected products no longer exists. Refresh the list.");
+            if (selectedIds.includes(allIds[index])) {
+              throw new Error("One of the selected products no longer exists. Refresh the list.");
+            }
+            return;
           }
           const currentGroupId = snapshot.data().groupId;
           if (currentGroupId && currentGroupId !== groupRef.id) {
@@ -225,7 +228,8 @@ export default function GroupProductsScreen() {
           }
         });
 
-        allIds.forEach((id) => {
+        allIds.forEach((id, index) => {
+          if (!productSnapshots[index].exists()) return;
           const productRef = doc(db, "products", id);
           if (selectedIds.includes(id)) {
             transaction.update(productRef, { groupId: groupRef.id });
