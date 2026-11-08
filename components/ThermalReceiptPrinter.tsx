@@ -479,7 +479,6 @@ const productUnits = new Map<string, string>(productUnitEntries);
       }
       await printer.separator("-");
 
-      if (totalSavings > 0) await printer.println(twoColumnLine("You saved", money(totalSavings)));
       await printer.println(twoColumnLine("Subtotal", money(subtotal)));
       await printer.println(
         twoColumnLine("Delivery", delivery === 0 ? "FREE" : money(delivery))
@@ -492,6 +491,12 @@ const productUnits = new Map<string, string>(productUnitEntries);
       await printer.setSize("normal");
       await printer.println(money(total));
       await printer.bold(false);
+      if (totalSavings > 0) {
+        await printer.separator("-");
+        await printer.bold(true);
+        await printer.println(twoColumnLine("YOUR SAVINGS", money(totalSavings)));
+        await printer.bold(false);
+      }
       await printer.separator("-");
 
       await printer.bold(true);
