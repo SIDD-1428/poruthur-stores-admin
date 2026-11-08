@@ -759,6 +759,8 @@ Team BonMart`;
               <View style={styles.itemLeft}>
                 <Text style={styles.itemName}>{item.name}</Text>
                 <Text style={styles.itemQty}>Qty: {item.quantity}</Text>
+                {Number(item.mrp ?? item.unitPrice ?? item.price) > Number(item.unitPrice ?? item.price) ? <Text style={{ fontSize: 11, color: "#999", textDecorationLine: "line-through" }}>MRP ₹{item.mrp} each</Text> : null}
+                {Number(item.savings ?? 0) > 0 ? <Text style={{ fontSize: 11, color: "#18864B", fontWeight: "700" }}>Saved ₹{Number(item.savings).toFixed(2)}</Text> : null}
               </View>
               <Text style={styles.itemPrice}>₹{item.unitPrice * item.quantity}</Text>
             </View>
@@ -766,6 +768,7 @@ Team BonMart`;
         </InfoCard>
 
         <InfoCard icon="wallet-outline" iconColor={Colors.primary} label="Bill Summary" delay={360}>
+          {Number(order.pricing?.savings ?? 0) > 0 ? <View style={styles.infoRow}><Text style={styles.infoKey}>Total Savings</Text><Text style={[styles.infoValue, { color: "#18864B" }]}>₹{Number(order.pricing.savings).toFixed(2)}</Text></View> : null}
           <View style={styles.infoRow}>
             <Text style={styles.infoKey}>Subtotal</Text>
             <Text style={styles.infoValue}>₹{order.pricing?.subtotal ?? order.total}</Text>
