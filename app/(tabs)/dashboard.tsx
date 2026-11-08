@@ -392,56 +392,65 @@ export default function Dashboard() {
                 <Text style={styles.sectionSubtitle}>Latest transactions</Text>
             </View>
 
-            {recentOrders.length === 0 ? (
-                <Animated.View entering={ZoomIn.delay(550)} style={styles.emptyCard}>
-                    <Ionicons name="receipt-outline" size={48} color={Colors.muted} />
-                    <Text style={styles.emptyText}>No orders yet</Text>
-                </Animated.View>
-            ) : (
-                recentOrders.map((order, index) => (
-                    <Animated.View
-                        key={order.id}
-                        entering={FadeInDown.delay(550 + index * 50).springify()}
-                    >
-                        <TouchableOpacity
-                            style={styles.orderCard}
-                            onPress={() => handleNavigation(`/order/${order.id}`)}
-                            activeOpacity={0.7}
-                        >
-                            <View style={styles.orderGradient}>
-                                <View style={styles.orderHeader}>
-                                    <View>
-                                        <Text style={styles.orderId}>#{order.id.slice(0, 8).toUpperCase()}</Text>
-                                        <Text style={styles.orderDate}>
-                                            {order.createdAt?.toDate
-                                                ? order.createdAt.toDate().toLocaleDateString("en-IN")
-                                                : "Just now"}
-                                        </Text>
-                                    </View>
-                                    <View style={[
-                                        styles.orderStatus,
-                                        order.status === "Delivered" && styles.statusDelivered,
-                                        order.status === "Pending" && styles.statusPending,
-                                        order.status === "Cancelled" && styles.statusCancelled,
-                                    ]}>
-                                        <View style={[
-                                            styles.statusDot,
-                                            order.status === "Delivered" && { backgroundColor: Colors.success },
-                                            order.status === "Pending" && { backgroundColor: Colors.warning },
-                                            order.status === "Cancelled" && { backgroundColor: Colors.danger },
-                                        ]} />
-                                        <Text style={styles.orderStatusText}>{order.status}</Text>
-                                    </View>
-                                </View>
-                                <View style={styles.orderFooter}>
-                                    <Text style={styles.orderAmount}>₹{order.total}</Text>
-                                    <Text style={styles.orderItems}>{order.items?.length || 0} items</Text>
-                                </View>
-                            </View>
-                        </TouchableOpacity>
+            <View style={styles.recentOrdersContainer}>
+                {recentOrders.length === 0 ? (
+                    <Animated.View entering={ZoomIn.delay(550)} style={styles.emptyCard}>
+                        <Ionicons name="receipt-outline" size={36} color={Colors.muted} />
+                        <Text style={styles.emptyText}>No orders yet</Text>
                     </Animated.View>
-                ))
-            )}
+                ) : (
+                    <ScrollView
+                        style={styles.recentOrdersScroll}
+                        contentContainerStyle={styles.recentOrdersContent}
+                        nestedScrollEnabled
+                        showsVerticalScrollIndicator
+                    >
+                        {recentOrders.map((order, index) => (
+                            <Animated.View
+                                key={order.id}
+                                entering={FadeInDown.delay(550 + index * 50).springify()}
+                            >
+                                <TouchableOpacity
+                                    style={styles.orderCard}
+                                    onPress={() => handleNavigation(`/order/${order.id}`)}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={styles.orderGradient}>
+                                        <View style={styles.orderHeader}>
+                                            <View>
+                                                <Text style={styles.orderId}>#{order.id.slice(0, 8).toUpperCase()}</Text>
+                                                <Text style={styles.orderDate}>
+                                                    {order.createdAt?.toDate
+                                                        ? order.createdAt.toDate().toLocaleDateString("en-IN")
+                                                        : "Just now"}
+                                                </Text>
+                                            </View>
+                                            <View style={[
+                                                styles.orderStatus,
+                                                order.status === "Delivered" && styles.statusDelivered,
+                                                order.status === "Pending" && styles.statusPending,
+                                                order.status === "Cancelled" && styles.statusCancelled,
+                                            ]}>
+                                                <View style={[
+                                                    styles.statusDot,
+                                                    order.status === "Delivered" && { backgroundColor: Colors.success },
+                                                    order.status === "Pending" && { backgroundColor: Colors.warning },
+                                                    order.status === "Cancelled" && { backgroundColor: Colors.danger },
+                                                ]} />
+                                                <Text style={styles.orderStatusText}>{order.status}</Text>
+                                            </View>
+                                        </View>
+                                        <View style={styles.orderFooter}>
+                                            <Text style={styles.orderAmount}>₹{order.total}</Text>
+                                            <Text style={styles.orderItems}>{order.items?.length || 0} items</Text>
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            </Animated.View>
+                        ))}
+                    </ScrollView>
+                )}
+            </View>
 
             {/* ── Low Stock Alerts ── */}
             {lowStock.length > 0 && (
@@ -723,10 +732,28 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
 
+    // Recent orders compact scroll container
+    recentOrdersContainer: {
+        height: 250,
+        marginHorizontal: 16,
+        padding: 10,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: Colors.separator,
+        backgroundColor: Colors.surface,
+        overflow: "hidden",
+    },
+    recentOrdersScroll: {
+        flex: 1,
+    },
+    recentOrdersContent: {
+        paddingBottom: 2,
+    },
+
     // Order Cards
     orderCard: {
-        marginHorizontal: 16,
-        marginBottom: 10,
+        marginHorizontal: 0,
+        marginBottom: 8,
         borderRadius: 16,
         overflow: "hidden",
         borderWidth: 1,
@@ -734,13 +761,13 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.card,
     },
     orderGradient: {
-        padding: 16,
+        padding: 12,
     },
     orderHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "flex-start",
-        marginBottom: 12,
+        marginBottom: 8,
     },
     orderId: {
         fontSize: 14,
@@ -784,10 +811,10 @@ const styles = StyleSheet.create({
         alignItems: "center",
         borderTopWidth: 1,
         borderTopColor: Colors.separator,
-        paddingTop: 12,
+        paddingTop: 8,
     },
     orderAmount: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: "700",
         color: Colors.textPrimary,
     },
