@@ -7,7 +7,7 @@ import {
 } from "expo-bluetooth-thermal-printer";
 import React, { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
-import UPNG from "upng-js";
+import * as UPNG from "upng-js";
 import { db } from "../firebase/config";
 import {
   ActivityIndicator,
@@ -74,8 +74,8 @@ const printQrBitmap = async (printer: any, imageUrl: string) => {
   const response = await fetch(imageUrl);
   if (!response.ok) throw new Error("Unable to download the payment QR image.");
   const buffer = await response.arrayBuffer();
-  const decoded = (UPNG as any).decode(buffer);
-  const rgba = (UPNG as any).toRGBA8(decoded)[0] as Uint8Array;
+  const decoded = UPNG.decode(buffer);
+  const rgba = new Uint8Array(UPNG.toRGBA8(decoded)[0]);
   const sourceWidth = decoded.width as number;
   const sourceHeight = decoded.height as number;
   const targetWidth = Math.min(384, sourceWidth);
