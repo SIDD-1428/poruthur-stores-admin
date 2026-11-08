@@ -47,29 +47,36 @@ body{
     color:#1B5E20;
 }
 .tagline{
-    color:#777;
-    font-size:13px;
+    color:#888;
+    font-size:12px;
+    font-weight:400;
 }
 .badge{
     background:#1B5E20;
     color:white;
     padding:8px 16px;
     border-radius:6px;
-    font-weight:bold;
+    font-size:12px;
+    font-weight:500;
+    letter-spacing:.4px;
 }
 .section{
     margin-top:24px;
 }
 .section h3{
     color:#1B5E20;
-    border-bottom:1px solid #DDD;
+    border-bottom:1px solid #E5E5E5;
     padding-bottom:6px;
+    font-size:14px;
+    font-weight:600;
 }
 .info{
     width:100%;
 }
 .info td{
     padding:5px 0;
+    font-weight:400;
+    color:#555;
 }
 table{
     width:100%;
@@ -77,17 +84,22 @@ table{
     margin-top:10px;
 }
 th{
-    background:#1B5E20;
-    color:white;
+    background:#F4F7F4;
+    color:#333;
     padding:10px;
     text-align:left;
+    font-size:12px;
+    font-weight:600;
 }
 td{
     padding:10px;
     border-bottom:1px solid #EEE;
+    font-size:13px;
+    font-weight:400;
+    color:#444;
 }
 tr:nth-child(even){
-    background:#FAFAFA;
+    background:#FCFCFC;
 }
 .summary{
     margin-top:20px;
@@ -96,18 +108,27 @@ tr:nth-child(even){
 }
 .summary td{
     padding:8px;
+    font-size:13px;
+    font-weight:400;
+    color:#555;
 }
-.total{
-    font-size:22px;
-    font-weight:bold;
+.savings td{
+    color:#18864B;
+    font-weight:600;
+    border-top:1px solid #EEE;
+}
+.total td{
+    font-size:16px;
+    font-weight:700;
     color:#1B5E20;
-    border-top:2px solid #1B5E20;
+    border-top:1.5px solid #1B5E20;
 }
 .footer{
     margin-top:45px;
     text-align:center;
-    color:#777;
-    font-size:12px;
+    color:#888;
+    font-size:11px;
+    font-weight:400;
 }
 </style>
 </head>
@@ -122,17 +143,17 @@ tr:nth-child(even){
 
 <div class="section">
 <table class="info">
-<tr><td><b>Invoice No</b></td><td>${order.invoice?.number ?? `PSINV-${order.id.slice(0,8).toUpperCase()}`}</td></tr>
-<tr><td><b>Order ID</b></td><td>${order.id.slice(0,12).toUpperCase()}</td></tr>
-<tr><td><b>Date</b></td><td>${formatDate(order.invoice?.issuedAt ?? order.createdAt)}</td></tr>
-<tr><td><b>Status</b></td><td>${order.status}</td></tr>
+<tr><td>Invoice No</td><td>${order.invoice?.number ?? `PSINV-${order.id.slice(0,8).toUpperCase()}`}</td></tr>
+<tr><td>Order ID</td><td>${order.id.slice(0,12).toUpperCase()}</td></tr>
+<tr><td>Date</td><td>${formatDate(order.invoice?.issuedAt ?? order.createdAt)}</td></tr>
+<tr><td>Status</td><td>${order.status}</td></tr>
 </table>
 </div>
 
 <div class="section">
 <h3>Customer</h3>
 <p>
-<b>${order.customerName}</b><br>
+${order.customerName}<br>
 ${order.customerEmail}<br>
 ${order.address?.phone}
 </p>
@@ -181,7 +202,7 @@ ${order.pricing?.deliveryCharge === 0 ? "FREE" : `₹${order.pricing?.deliveryCh
 <td>Grand Total</td>
 <td align="right">₹${order.pricing?.grandTotal ?? order.total}</td>
 </tr>
-${Number(order.pricing?.savings ?? order.items.reduce((sum, item) => sum + Number(item.savings ?? Math.max(0, Number(item.mrp ?? item.unitPrice ?? item.price) - Number(item.unitPrice ?? item.price)) * Number(item.quantity ?? 0)), 0)) > 0 ? `<tr style="color:#18864B;font-weight:bold"><td>YOUR SAVINGS</td><td align="right">₹${Number(order.pricing?.savings ?? order.items.reduce((sum, item) => sum + Number(item.savings ?? Math.max(0, Number(item.mrp ?? item.unitPrice ?? item.price) - Number(item.unitPrice ?? item.price)) * Number(item.quantity ?? 0)), 0)).toFixed(2)}</td></tr>` : ""}
+${Number(order.pricing?.savings ?? order.items.reduce((sum, item) => sum + Number(item.savings ?? Math.max(0, Number(item.mrp ?? item.unitPrice ?? item.price) - Number(item.unitPrice ?? item.price)) * Number(item.quantity ?? 0)), 0)) > 0 ? `<tr class="savings"><td>YOUR SAVINGS</td><td align="right">₹${Number(order.pricing?.savings ?? order.items.reduce((sum, item) => sum + Number(item.savings ?? Math.max(0, Number(item.mrp ?? item.unitPrice ?? item.price) - Number(item.unitPrice ?? item.price)) * Number(item.quantity ?? 0)), 0)).toFixed(2)}</td></tr>` : ""}
 </table>
 
 <div class="section">
@@ -196,7 +217,7 @@ ${order.payment?.status ?? "Pending"}
 </div>
 
 <div class="footer">
-<b>Thank you for shopping with BonMart</b>
+Thank you for shopping with BonMart
 <br><br>
 This is a computer generated invoice.
 </div>
