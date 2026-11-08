@@ -28,8 +28,8 @@ import Animated, {
   ZoomIn
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { db } from "../../firebase/config";
 import ThermalReceiptPrinter from "../../components/ThermalReceiptPrinter";
+import { db } from "../../firebase/config";
 
 const Colors = {
   background: "#FFFFFF",
@@ -599,8 +599,6 @@ export default function OrderDetails() {
           ))}
         </InfoCard>
 
-        <ThermalReceiptPrinter order={order} />
-
         <InfoCard icon="wallet-outline" iconColor={Colors.primary} label="Bill Summary" delay={360}>
           <View style={styles.infoRow}>
             <Text style={styles.infoKey}>Subtotal</Text>
@@ -621,13 +619,17 @@ export default function OrderDetails() {
           </View>
         </InfoCard>
 
+    
+
+        <ThermalReceiptPrinter order={order} />
+
         <Animated.View entering={FadeInUp.delay(420)}>
           <TouchableOpacity style={styles.printBtn} onPress={()=> router.push({ pathname:"/printOrder", params:{id:order.id,},})}>
             <LinearGradient colors={[Colors.primary,Colors.accent]}
             style={styles.printBtnGradient}>
               <Ionicons name="print-outline" size={20} color="#FFF"/>
               <Text style={styles.printBtnText}>
-                  Print Invoice
+                  Share Invoice as PDF
               </Text>
             </LinearGradient>
           </TouchableOpacity>

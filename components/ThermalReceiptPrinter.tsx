@@ -1,5 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   getBondedDevices,
   isBluetoothEnabled,
@@ -327,7 +327,7 @@ export default function ThermalReceiptPrinter({ order }: Props) {
           <Ionicons name="print-outline" size={20} color="#1B5E20" />
         </View>
         <View style={styles.headerText}>
-          <Text style={styles.title}>Thermal Receipt</Text>
+          <Text style={styles.title}>Print Receipt</Text>
           <Text style={styles.subtitle}>
             {selected
               ? selected.name || "Saved Bluetooth printer"

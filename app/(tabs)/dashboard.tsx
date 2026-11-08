@@ -344,7 +344,7 @@ export default function Dashboard() {
                             <View style={[styles.actionIcon, { backgroundColor: Colors.primaryLight }]}>
                                 <Ionicons name="images-outline" size={24} color={Colors.primary} />
                             </View>
-                            <Text style={styles.actionTitle}>Promotional Banners</Text>
+                            <Text style={styles.actionTitle}>Banners</Text>
                             <Text style={styles.actionSub}>Manage home-page offers</Text>
                         </View>
                     </TouchableOpacity>
