@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
+import { Image } from "expo-image";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -753,16 +754,28 @@ Team BonMart`;
         <InfoCard icon="bag-outline" iconColor={Colors.warning} label={`Items (${order.items?.length ?? 0})`} delay={310}>
           {order.items?.map((item: any, i: number) => (
             <View
-              key={i}
+              key={item.productId || i}
               style={[styles.itemRow, i === order.items.length - 1 && { borderBottomWidth: 0 }]}
             >
+              {(item.image || item.productImage || item.thumbnailUrl) ? (
+                <Image
+                  source={{ uri: item.image || item.productImage || item.thumbnailUrl }}
+                  style={styles.itemImage}
+                  contentFit="cover"
+                  transition={120}
+                />
+              ) : (
+                <View style={styles.itemImagePlaceholder}>
+                  <Ionicons name="image-outline" size={22} color={Colors.muted} />
+                </View>
+              )}
               <View style={styles.itemLeft}>
                 <Text style={styles.itemName}>{item.name}</Text>
                 <Text style={styles.itemQty}>Qty: {item.quantity}</Text>
                 {Number(item.mrp ?? item.unitPrice ?? item.price) > Number(item.unitPrice ?? item.price) ? <Text style={{ fontSize: 11, color: "#999", textDecorationLine: "line-through" }}>MRP ₹{item.mrp} each</Text> : null}
                 {Number(item.savings ?? 0) > 0 ? <Text style={{ fontSize: 11, color: "#18864B", fontWeight: "700" }}>Saved ₹{Number(item.savings).toFixed(2)}</Text> : null}
               </View>
-              <Text style={styles.itemPrice}>₹{item.unitPrice * item.quantity}</Text>
+              <Text style={styles.itemPrice}>₹{Number(item.unitPrice ?? item.price ?? 0) * Number(item.quantity ?? 0)}</Text>
             </View>
           ))}
         </InfoCard>
@@ -1636,11 +1649,27 @@ const styles = StyleSheet.create<MainStyles>({
 
   itemRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: 12,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.separator,
+  },
+
+  itemImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+    backgroundColor: Colors.surface,
+  },
+
+  itemImagePlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+    backgroundColor: Colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   itemLeft: {
