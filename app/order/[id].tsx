@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   View,
   ViewStyle,
+  ImageStyle,
 } from "react-native";
 import Animated, {
   FadeInDown,
@@ -1107,7 +1108,7 @@ type MainStyles = {
   addressMuted: TextStyle;
   phoneRow: ViewStyle;
   itemRow: ViewStyle;
-  itemImage: ViewStyle;
+  itemImage: ImageStyle;
   itemImagePlaceholder: ViewStyle;
   itemLeft: ViewStyle;
   itemName: TextStyle;
