@@ -15,6 +15,7 @@ import {
     updateDoc,
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import React, {
     useEffect,
     useState,
@@ -37,7 +38,7 @@ import Animated, {
     FadeInUp,
     ZoomIn,
 } from "react-native-reanimated";
-import { db, storage } from "../firebase/config";
+import { auth, db, storage } from "../firebase/config";
 
 // ── Clean Black/White/Grey Color Scheme ──
 const Colors = {
@@ -160,8 +161,10 @@ export default function EditProductScreen() {
       const fileName = `Products/${Date.now()}`;
       const storageRef = ref(storage, fileName);
       await uploadBytes(storageRef, blob);
-      const downloadURL = await getDownloadURL(storageRef);
-      setImage(downloadURL);
+      const functions = getFunctions(undefined, "asia-south1");
+      const optimizeImage = httpsCallable<{ storagePath: string }, { imageUrl: string; thumbnailUrl: string; imageBytes: number; thumbnailBytes: number }>(functions, "optimizeProductImage");
+      const optimized = await optimizeImage({ storagePath: fileName });
+      setImage(optimized.data.imageUrl);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", "Image uploaded successfully");
     } catch (error) {
