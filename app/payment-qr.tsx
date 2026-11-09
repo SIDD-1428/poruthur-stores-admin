@@ -3,26 +3,26 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import {
-    doc,
-    getDoc,
-    serverTimestamp,
-    setDoc,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
 } from "firebase/firestore";
 import {
-    getDownloadURL,
-    ref,
-    uploadBytes,
+  getDownloadURL,
+  ref,
+  uploadBytes,
 } from "firebase/storage";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { db, storage } from "../firebase/config";
@@ -256,7 +256,7 @@ export default function PaymentQR() {
               </Text>
 
               <Text style={styles.emptySubtitle}>
-                Upload your store's UPI QR code.
+                Upload your store&apos;s UPI QR code.
               </Text>
 
             </View>
@@ -305,7 +305,7 @@ export default function PaymentQR() {
           <Text style={styles.infoText}>
             This QR code will automatically appear in
             the customer checkout when they select
-            "Pay by QR".
+            &quot;Pay by QR&quot;.
           </Text>
 
         </View>

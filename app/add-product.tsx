@@ -96,6 +96,7 @@ export default function AddProductScreen() {
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
 
   useEffect(() => {
     loadCategories();
@@ -178,7 +179,8 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
 
     const optimized = await optimizeImage({ storagePath: fileName });
 
-    setImage(optimized.data.imageUrl);
+setImage(optimized.data.imageUrl);
+setThumbnailUrl(optimized.data.thumbnailUrl);
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert("Success", "Image uploaded and optimized successfully");
@@ -262,6 +264,7 @@ await uploadImage(
         stock: Number(stock) || 0,
         maxOrderQty: Number(maxOrderQty) || 0,
         createdAt: new Date(),
+        thumbnailUrl: thumbnailUrl || image,
       });
 
       await loadCategories();
@@ -372,7 +375,10 @@ await uploadImage(
               <Image source={{ uri: image }} style={styles.imagePreview} />
               <TouchableOpacity
                 style={styles.removeImageBtn}
-                onPress={() => setImage("")}
+                onPress={() =>{ setImage("");
+                setThumbnailUrl("");
+                } 
+                }
               >
                 <Ionicons name="close-circle" size={24} color={Colors.danger} />
               </TouchableOpacity>
