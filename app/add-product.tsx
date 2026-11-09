@@ -27,7 +27,7 @@ import Animated, {
   FadeInUp,
   ZoomIn,
 } from "react-native-reanimated";
-import { auth, db, storage } from "../firebase/config";
+import { db, storage } from "../firebase/config";
 
 // ── Clean Black/White/Grey Color Scheme ──
 const Colors = {
