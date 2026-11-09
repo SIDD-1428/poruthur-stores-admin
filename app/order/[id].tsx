@@ -1107,6 +1107,8 @@ type MainStyles = {
   addressMuted: TextStyle;
   phoneRow: ViewStyle;
   itemRow: ViewStyle;
+  itemImage: ViewStyle;
+  itemImagePlaceholder: ViewStyle;
   itemLeft: ViewStyle;
   itemName: TextStyle;
   itemQty: TextStyle;
