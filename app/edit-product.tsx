@@ -646,7 +646,7 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
             icon="link-outline"
             placeholder="Image URL (Optional - leave empty if using upload)"
             value={image}
-            onChangeText={(value) => {
+            onChangeText={(value:string) => {
               setImage(value);
               setThumbnailUrl("");
             }}

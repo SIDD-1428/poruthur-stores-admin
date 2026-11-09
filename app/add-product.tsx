@@ -263,7 +263,7 @@ await uploadImage(
         unit: unit || "",
         stock: Number(stock) || 0,
         maxOrderQty: Number(maxOrderQty) || 0,
-        createdAt: serverTimestamp(),
+        createdAt: new Date(),
         thumbnailUrl: thumbnailUrl || image,
       });
 
@@ -375,11 +375,10 @@ await uploadImage(
               <Image source={{ uri: image }} style={styles.imagePreview} />
               <TouchableOpacity
                 style={styles.removeImageBtn}
-                disabled={isUploading}
-                onPress={() => {
-                  setImage("");
-                  setThumbnailUrl("");
-                }}
+                onPress={() =>{ setImage("");
+                setThumbnailUrl("");
+                } 
+                }
               >
                 <Ionicons name="close-circle" size={24} color={Colors.danger} />
               </TouchableOpacity>
@@ -619,11 +618,10 @@ await uploadImage(
             icon="link-outline"
             placeholder="Image URL (Optional - leave empty if using upload)"
             value={image}
-            onChangeText={(value) => {
+            onChangeText={(value : string) => {
               setImage(value);
               setThumbnailUrl("");
-            }}
-          />
+            }}          />
         </Animated.View>
 
         {/* Save Button */}
