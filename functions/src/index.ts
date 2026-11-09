@@ -154,3 +154,89 @@ export const notifyAdminNewOrder = onDocumentCreated(
     }
   }
 );
+
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import sharp from "sharp";
+import { randomUUID } from "crypto";
+
+/**
+ * Converts an uploaded product image into a WebP asset on the server.
+ * The original upload is retained as a recoverable source.
+ */
+export const optimizeProductImage = onCall(
+  { region: "asia-south1", memory: "1GiB", timeoutSeconds: 120 },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Sign in as an admin to optimize images.");
+    }
+
+    const adminDoc = await db.collection("admins").doc(request.auth.uid).get();
+    if (!adminDoc.exists) {
+      throw new HttpsError("permission-denied", "Only authorized admins can optimize product images.");
+    }
+
+    const storagePath = request.data?.storagePath;
+    if (
+      typeof storagePath !== "string" ||
+      !storagePath.startsWith("Products/") ||
+      storagePath.includes("..") ||
+      storagePath.endsWith("/")
+    ) {
+      throw new HttpsError("invalid-argument", "A valid product image path is required.");
+    }
+
+    const bucket = admin.storage().bucket();
+    const sourceFile = bucket.file(storagePath);
+    const [sourceExists] = await sourceFile.exists();
+    if (!sourceExists) {
+      throw new HttpsError("not-found", "The uploaded source image was not found.");
+    }
+
+    const [sourceBuffer] = await sourceFile.download();
+    const outputBase = storagePath.replace(/\.[^.]+$/, "");
+    const imagePath = `${outputBase}_optimized.webp`;
+    const thumbnailPath = `${outputBase}_thumbnail.webp`;
+    const imageToken = randomUUID();
+    const thumbnailToken = randomUUID();
+
+    const optimizedBuffer = await sharp(sourceBuffer, { failOn: "error" })
+      .rotate()
+      .resize({ width: 1200, height: 1200, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 82, effort: 4 })
+      .toBuffer();
+
+    const thumbnailBuffer = await sharp(sourceBuffer, { failOn: "error" })
+      .rotate()
+      .resize({ width: 320, height: 320, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 76, effort: 4 })
+      .toBuffer();
+
+    await Promise.all([
+      bucket.file(imagePath).save(optimizedBuffer, {
+        resumable: false,
+        metadata: {
+          contentType: "image/webp",
+          cacheControl: "public,max-age=31536000,immutable",
+          metadata: { firebaseStorageDownloadTokens: imageToken },
+        },
+      }),
+      bucket.file(thumbnailPath).save(thumbnailBuffer, {
+        resumable: false,
+        metadata: {
+          contentType: "image/webp",
+          cacheControl: "public,max-age=31536000,immutable",
+          metadata: { firebaseStorageDownloadTokens: thumbnailToken },
+        },
+      }),
+    ]);
+
+    const encoded = (path: string) => encodeURIComponent(path);
+    const baseUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/`;
+    return {
+      imageUrl: `${baseUrl}${encoded(imagePath)}?alt=media&token=${imageToken}`,
+      thumbnailUrl: `${baseUrl}${encoded(thumbnailPath)}?alt=media&token=${thumbnailToken}`,
+      imageBytes: optimizedBuffer.length,
+      thumbnailBytes: thumbnailBuffer.length,
+    };
+  }
+);
