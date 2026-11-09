@@ -27,7 +27,6 @@ import Animated, {
   FadeInDown,
   FadeInUp,
   ZoomIn,
-  ZoomOut,
 } from "react-native-reanimated";
 import { db, storage } from "../firebase/config";
 
@@ -321,7 +320,6 @@ console.log(
         nestedScrollEnabled
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}
       >
         {/* Product Image Section */}
@@ -735,7 +733,7 @@ console.log(
               activeOpacity={1}
               onPress={() => setImageUrlModalVisible(false)}
             />
-            <Animated.View entering={ZoomIn.springify().damping(18)} exiting={ZoomOut.duration(160)} style={styles.imageUrlModalCard}>
+            <View style={styles.imageUrlModalCard}>
               <BlurView intensity={65} tint="light" style={styles.imageUrlModalGlass}>
                 <LinearGradient
                   colors={["rgba(255,255,255,0.94)", "rgba(245,247,250,0.86)", "rgba(255,255,255,0.92)"]}
@@ -772,7 +770,7 @@ console.log(
                     disabled={!image.trim()}
                     onPress={async () => {
                       try {
-                        await Clipboard.setStringAsync(image.trim());
+                        await setStringAsync(image.trim());
                         setImageUrlCopied(true);
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                       } catch {
@@ -790,7 +788,7 @@ console.log(
                   </TouchableOpacity>
                 </LinearGradient>
               </BlurView>
-            </Animated.View>
+            </View>
           </View>
         </Modal>
     </KeyboardAvoidingView>
