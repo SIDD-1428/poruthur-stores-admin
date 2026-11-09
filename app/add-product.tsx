@@ -6,8 +6,8 @@ import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { addDoc, collection, getDocs, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes } from "firebase/storage";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { ref, uploadBytes } from "firebase/storage";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -122,27 +122,76 @@ console.log(
     }
   };
 
-  const uploadImage = async (uri: string) => {
-    try {
-      setIsUploading(true);
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const fileName = `Products/${Date.now()}`;
-      const storageRef = ref(storage, fileName);
-      await uploadBytes(storageRef, blob);
-      const functions = getFunctions(undefined, "asia-south1");
-      const optimizeImage = httpsCallable<{ storagePath: string }, { imageUrl: string; thumbnailUrl: string; imageBytes: number; thumbnailBytes: number }>(functions, "optimizeProductImage");
-      const optimized = await optimizeImage({ storagePath: fileName });
-      setImage(optimized.data.imageUrl);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Success", "Image uploaded successfully");
-    } catch (error) {
-      console.log(error);
-      Alert.alert("Error", "Image upload error");
-    } finally {
-      setIsUploading(false);
+
+const uploadImage = async (uri: string, mimeType?: string | null) => {
+  try {
+    setIsUploading(true);
+
+    const response = await fetch(uri);
+    const blob = await response.blob();
+
+    const uriExtension = uri.split("?")[0].split(".").pop()?.toLowerCase();
+
+    const mimeByExtension: Record<string, string> = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      webp: "image/webp",
+    };
+
+    const contentType = (
+      mimeType || blob.type || mimeByExtension[uriExtension || ""] || ""
+    ).split(";")[0].toLowerCase();
+
+    const extensionByMime: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/jpg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+    };
+
+    const extension = extensionByMime[contentType];
+
+    if (!extension) {
+      throw new Error("Only JPEG, PNG, and WebP images are supported.");
     }
-  };
+
+    const fileName = `Products/${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}.${extension}`;
+
+    const storageRef = ref(storage, fileName);
+
+    await uploadBytes(storageRef, blob, { contentType });
+
+    const functions = getFunctions(undefined, "asia-south1");
+
+    const optimizeImage = httpsCallable<
+      { storagePath: string },
+      {
+        imageUrl: string;
+        thumbnailUrl: string;
+        imageBytes: number;
+        thumbnailBytes: number;
+      }
+    >(functions, "optimizeProductImage");
+
+    const optimized = await optimizeImage({ storagePath: fileName });
+
+    setImage(optimized.data.imageUrl);
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert("Success", "Image uploaded and optimized successfully");
+  } catch (error) {
+    console.log("Image upload error:", error);
+    Alert.alert(
+      "Error",
+      error instanceof Error ? error.message : "Image upload error"
+    );
+  } finally {
+    setIsUploading(false);
+  }
+};
 
   const pickFromGallery = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -159,8 +208,10 @@ console.log(
     });
 
     if (!result.canceled) {
-      await uploadImage(result.assets[0].uri);
-    }
+await uploadImage(
+  result.assets[0].uri,
+  result.assets[0].mimeType
+);    }
   };
 
   const takePhoto = async () => {
@@ -175,13 +226,19 @@ console.log(
       allowsEditing: true,
       aspect: [4, 3],
     });
-
     if (!result.canceled) {
-      await uploadImage(result.assets[0].uri);
-    }
+  await uploadImage(
+    result.assets[0].uri,
+    result.assets[0].mimeType
+  );
+}
   };
 
   const saveProduct = async () => {
+    if(isUploading){
+          Alert.alert("Image Uploading", "Please wait until the image upload and optimization are complete");
+          return;
+        }
     if (!name || !price || !mrp || !image || !category || Number(mrp) < Number(price)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
@@ -564,7 +621,7 @@ console.log(
           <TouchableOpacity
             style={styles.saveButton}
             onPress={saveProduct}
-            disabled={isSaving}
+            disabled={isSaving || isUploading}
             activeOpacity={0.8}
           >
             <LinearGradient

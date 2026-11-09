@@ -6,37 +6,37 @@ import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-    addDoc,
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    serverTimestamp,
-    updateDoc,
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  serverTimestamp,
+  updateDoc,
 } from "firebase/firestore";
-import { ref, uploadBytes } from "firebase/storage";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { ref, uploadBytes } from "firebase/storage";
 import React, {
-    useEffect,
-    useState,
+  useEffect,
+  useState,
 } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import Animated, {
-    FadeInDown,
-    FadeInUp,
-    ZoomIn,
+  FadeInDown,
+  FadeInUp,
+  ZoomIn,
 } from "react-native-reanimated";
 import { db, storage } from "../firebase/config";
 
@@ -105,7 +105,7 @@ export default function EditProductScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  
+
   // Category dropdown states
   const [categories, setCategories] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -153,27 +153,76 @@ export default function EditProductScreen() {
     }
   };
 
-  const uploadImage = async (uri: string) => {
-    try {
-      setIsUploading(true);
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const fileName = `Products/${Date.now()}`;
-      const storageRef = ref(storage, fileName);
-      await uploadBytes(storageRef, blob);
-      const functions = getFunctions(undefined, "asia-south1");
-      const optimizeImage = httpsCallable<{ storagePath: string }, { imageUrl: string; thumbnailUrl: string; imageBytes: number; thumbnailBytes: number }>(functions, "optimizeProductImage");
-      const optimized = await optimizeImage({ storagePath: fileName });
-      setImage(optimized.data.imageUrl);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Success", "Image uploaded successfully");
-    } catch (error) {
-      console.log(error);
-      Alert.alert("Error", "Image upload error");
-    } finally {
-      setIsUploading(false);
+
+const uploadImage = async (uri: string, mimeType?: string | null) => {
+  try {
+    setIsUploading(true);
+
+    const response = await fetch(uri);
+    const blob = await response.blob();
+
+    const uriExtension = uri.split("?")[0].split(".").pop()?.toLowerCase();
+
+    const mimeByExtension: Record<string, string> = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      webp: "image/webp",
+    };
+
+    const contentType = (
+      mimeType || blob.type || mimeByExtension[uriExtension || ""] || ""
+    ).split(";")[0].toLowerCase();
+
+    const extensionByMime: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/jpg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+    };
+
+    const extension = extensionByMime[contentType];
+
+    if (!extension) {
+      throw new Error("Only JPEG, PNG, and WebP images are supported.");
     }
-  };
+
+    const fileName = `Products/${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}.${extension}`;
+
+    const storageRef = ref(storage, fileName);
+
+    await uploadBytes(storageRef, blob, { contentType });
+
+    const functions = getFunctions(undefined, "asia-south1");
+
+    const optimizeImage = httpsCallable<
+      { storagePath: string },
+      {
+        imageUrl: string;
+        thumbnailUrl: string;
+        imageBytes: number;
+        thumbnailBytes: number;
+      }
+    >(functions, "optimizeProductImage");
+
+    const optimized = await optimizeImage({ storagePath: fileName });
+
+    setImage(optimized.data.imageUrl);
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert("Success", "Image uploaded and optimized successfully");
+  } catch (error) {
+    console.log("Image upload error:", error);
+    Alert.alert(
+      "Error",
+      error instanceof Error ? error.message : "Image upload error"
+    );
+  } finally {
+    setIsUploading(false);
+  }
+};
 
   const pickFromGallery = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -190,8 +239,11 @@ export default function EditProductScreen() {
     });
 
     if (!result.canceled) {
-      await uploadImage(result.assets[0].uri);
-    }
+      await uploadImage(
+  result.assets[0].uri,
+  result.assets[0].mimeType
+);
+        }
   };
 
   const takePhoto = async () => {
@@ -208,8 +260,11 @@ export default function EditProductScreen() {
     });
 
     if (!result.canceled) {
-      await uploadImage(result.assets[0].uri);
-    }
+  await uploadImage(
+    result.assets[0].uri,
+    result.assets[0].mimeType
+  );
+}
   };
 
   const addCategory = async () => {
@@ -232,7 +287,7 @@ export default function EditProductScreen() {
       });
 
       console.log("Category added with ID:", docRef.id);
-      
+
       // Update local state
       setCategories((prev) => [...prev, newCategory.trim()]);
       setCategory(newCategory.trim());
@@ -244,14 +299,14 @@ export default function EditProductScreen() {
       Alert.alert("Success", `Category "${newCategory.trim()}" added successfully`);
     } catch (error: any) {
       console.log("Error adding category:", error);
-      
+
       let errorMessage = "Failed to add category";
       if (error.code === "permission-denied") {
         errorMessage = "Permission denied. Please check Firestore rules.";
       } else if (error.code === "unavailable") {
         errorMessage = "Network error. Please try again.";
       }
-      
+
       Alert.alert("Error", errorMessage);
     } finally {
       setIsAddingCategory(false);
@@ -259,6 +314,10 @@ export default function EditProductScreen() {
   };
 
   const updateProduct = async () => {
+    if(isUploading){
+      Alert.alert("Image Uploading", "Please wait until the image upload and optimization are complete");
+      return;
+    }
     if (!name || !price || !mrp || !category || Number(mrp) < Number(price)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
@@ -421,10 +480,10 @@ export default function EditProductScreen() {
             keyboardType="decimal-pad"
             required
           />
-          
+
           {/* Category Dropdown */}
           <Text style={styles.sectionTitle}>Category *</Text>
-          
+
           {!showNewCategory ? (
             <>
               <TouchableOpacity
@@ -463,7 +522,7 @@ export default function EditProductScreen() {
                   {categories.length > 0 && (
                     <View style={styles.dropdownDivider} />
                   )}
-                  
+
                   {categories.map((item, index) => (
                     <TouchableOpacity
                       key={`${item}-${index}`}
@@ -588,7 +647,7 @@ export default function EditProductScreen() {
           <TouchableOpacity
             style={styles.saveButton}
             onPress={updateProduct}
-            disabled={isSaving}
+            disabled={isSaving || isUploading}
             activeOpacity={0.8}
           >
             <LinearGradient
