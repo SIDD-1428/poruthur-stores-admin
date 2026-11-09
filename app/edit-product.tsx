@@ -96,6 +96,7 @@ export default function EditProductScreen() {
   const [price, setPrice] = useState("");
   const [mrp, setMrp] = useState("");
   const [image, setImage] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [protext, setProtext] = useState("");
   const [category, setCategory] = useState("");
   const [rating, setRating] = useState("");
@@ -139,6 +140,7 @@ export default function EditProductScreen() {
         setMrp(String(data.mrp ?? data.price ?? ""));
         setStock(String(data.stock || 0));
         setImage(data.image || "");
+        setThumbnailUrl(data.thumbnailUrl || data.image || "");
         setProtext(data.protext || "");
         setCategory(data.category || "");
         setRating(String(data.rating || ""));
@@ -210,6 +212,7 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
     const optimized = await optimizeImage({ storagePath: fileName });
 
     setImage(optimized.data.imageUrl);
+    setThumbnailUrl(optimized.data.thumbnailUrl);
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert("Success", "Image uploaded and optimized successfully");
@@ -335,6 +338,7 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
         price: Number(price),
         stock: Number(stock) || 0,
         image,
+        thumbnailUrl: thumbnailUrl || image,
         protext: protext || "",
         category,
         rating: Number(rating) || 0,
@@ -404,7 +408,11 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
               <Image source={{ uri: image }} style={styles.imagePreview} />
               <TouchableOpacity
                 style={styles.removeImageBtn}
-                onPress={() => setImage("")}
+                disabled={isUploading}
+                onPress={() => {
+                  setImage("");
+                  setThumbnailUrl("");
+                }}
               >
                 <Ionicons name="close-circle" size={24} color={Colors.danger} />
               </TouchableOpacity>
@@ -638,7 +646,10 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
             icon="link-outline"
             placeholder="Image URL (Optional - leave empty if using upload)"
             value={image}
-            onChangeText={setImage}
+            onChangeText={(value) => {
+              setImage(value);
+              setThumbnailUrl("");
+            }}
           />
         </Animated.View>
 
