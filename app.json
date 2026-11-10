@@ -4,7 +4,7 @@
     "slug": "poruthur-stores-admin",
     "version": "1.0.0",
     "runtimeVersion": {
-      "policy": "appVersion"
+      "policy": "fingerprint"
     },
     "updates": {
       "url": "https://u.expo.dev/3416d94a-2936-40c0-a20a-970f1121fd31"
