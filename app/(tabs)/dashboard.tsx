@@ -411,7 +411,8 @@ export default function Dashboard() {
             </View>
 
             {/* ── Recent Orders ── */}
-            <View style={styles.section}>
+            <View style={styles.recentOrdersContainer}>
+            <View style={styles.recentOrdersHeading}>
                 <Text style={styles.sectionTitle}>Recent Orders</Text>
                 <Text style={styles.sectionSubtitle}>Latest transactions</Text>
             </View>
@@ -466,6 +467,8 @@ export default function Dashboard() {
                     </Animated.View>
                 ))
             )}
+
+            </View>
 
             {/* ── Low Stock Alerts ── */}
             {lowStock.length > 0 && (
@@ -747,9 +750,24 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
 
+    recentOrdersContainer: {
+        marginHorizontal: 16,
+        marginTop: 24,
+        paddingVertical: 18,
+        paddingHorizontal: 14,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: Colors.separator,
+        backgroundColor: Colors.card,
+    },
+    recentOrdersHeading: {
+        marginBottom: 16,
+        paddingHorizontal: 2,
+    },
+
     // Order Cards
     orderCard: {
-        marginHorizontal: 16,
+        marginHorizontal: 0,
         marginBottom: 10,
         borderRadius: 16,
         overflow: "hidden",
