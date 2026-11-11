@@ -299,9 +299,6 @@ export default function OrderDetails() {
 
   const getDeliveryMessage = () => {
     const orderCode = String(order?.id || "").slice(0, 8).toUpperCase();
-    const items = Array.isArray(order?.items) ? order.items : [];
-    const totalQuantity = items.reduce((sum: number, item: any) => sum + Math.max(0, Number(item.quantity) || 1), 0);
-    const itemLines = items.map((item: any) => `• ${item.name || "Item"} × ${Number(item.quantity) || 1}`).join("\n");
     const customerPhone = order?.customerPhone || order?.address?.phone || "Not provided";
     const addressLines = [
       order?.address?.type ? `${order.address.type} Address` : "Delivery Address",
@@ -322,11 +319,6 @@ export default function OrderDetails() {
       `*Order No:* #${orderCode}`,
       `*Customer:* ${order?.customerName || "Customer"}`,
       `*Customer Contact:* ${customerPhone}`,
-      `*Total Items:* ${totalQuantity} (${items.length} product lines)`,
-      "",
-      "*Order Items:*",
-      itemLines || "No item details available",
-      "",
       "*Delivery Address:*",
       ...addressLines,
       mapsLink ? `*Google Maps:* ${mapsLink}` : "*Google Maps:* Location link unavailable",
