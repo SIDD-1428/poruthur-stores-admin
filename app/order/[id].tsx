@@ -1019,13 +1019,14 @@ Team BonMart`;
         }}
       >
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }}>
-          <View style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 26, borderTopRightRadius: 26, maxHeight: "88%", paddingHorizontal: 20, paddingTop: 14, paddingBottom: Math.max(insets.bottom, 20) }}>
+          <View style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 26, borderTopRightRadius: 26, maxHeight: "88%", paddingHorizontal: 20, paddingTop: 14, paddingBottom: Math.max(insets.bottom, 20), flexShrink: 1 }}>
             <View style={{ alignSelf: "center", width: 44, height: 5, borderRadius: 5, backgroundColor: "#DDDDDD", marginBottom: 18 }} />
+            <ScrollView style={{ flexGrow: 0, flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 10 }} nestedScrollEnabled showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {!selectedAssociate ? (
               <>
                 <Text style={{ fontSize: 21, fontWeight: "700", color: Colors.textPrimary }}>Choose delivery associate</Text>
                 <Text style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 6, marginBottom: 16 }}>Select who will receive this order's delivery details on WhatsApp.</Text>
-                <ScrollView keyboardShouldPersistTaps="handled">
+                <View>
                   {deliveryAssociates.length === 0 ? (
                     <View style={{ alignItems: "center", paddingVertical: 28 }}>
                       <Ionicons name="bicycle-outline" size={42} color={Colors.muted} />
@@ -1051,7 +1052,7 @@ Team BonMart`;
                       <Ionicons name="chevron-forward" size={18} color={Colors.muted} />
                     </TouchableOpacity>
                   ))}
-                </ScrollView>
+                </View>
               </>
             ) : (
               <>
@@ -1061,10 +1062,8 @@ Team BonMart`;
                 </TouchableOpacity>
                 <Text style={{ fontSize: 21, fontWeight: "700", color: Colors.textPrimary }}>Review delivery message</Text>
                 <Text style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 5, marginBottom: 12 }}>To: {selectedAssociate.name} · {selectedAssociate.phone}</Text>
-                <View style={{ backgroundColor: "#F5F5F5", borderRadius: 14, padding: 13, maxHeight: 390 }}>
-                  <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
-                    <Text selectable style={{ fontSize: 12, lineHeight: 19, color: Colors.textPrimary }}>{getDeliveryMessage()}</Text>
-                  </ScrollView>
+                <View style={{ backgroundColor: "#F5F5F5", borderRadius: 14, padding: 13 }}>
+                  <Text selectable style={{ fontSize: 12, lineHeight: 19, color: Colors.textPrimary }}>{getDeliveryMessage()}</Text>
                 </View>
                 <Text style={{ color: Colors.muted, fontSize: 11, lineHeight: 16, marginTop: 10 }}>WhatsApp will open with this message filled in. Review it and press Send yourself; nothing is sent automatically.</Text>
                 <TouchableOpacity onPress={openDeliveryWhatsApp} activeOpacity={0.85} style={{ backgroundColor: "#25D366", minHeight: 52, borderRadius: 14, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 9, marginTop: 14 }}>
@@ -1073,6 +1072,7 @@ Team BonMart`;
                 </TouchableOpacity>
               </>
             )}
+            </ScrollView>
             <TouchableOpacity onPress={() => { setShowAssociateModal(false); setSelectedAssociate(null); }} style={{ alignItems: "center", paddingVertical: 14, marginTop: 4 }}>
               <Text style={{ color: Colors.textSecondary, fontWeight: "600" }}>Close</Text>
             </TouchableOpacity>

@@ -30,11 +30,13 @@ const Colors = {
   background: "#FFFFFF",
   card: "#FFFFFF",
   surface: "#F5F5F5",
-  text: "#111111",
-  muted: "#777777",
+  text: "#000000",
+  muted: "#999999",
   border: "#E8E8E8",
-  green: "#128C7E",
-  danger: "#D93025",
+  primary: "#000000",
+  primaryLight: "#00000010",
+  success: "#34C759",
+  danger: "#FF3B30",
 };
 
 type Associate = {
@@ -198,7 +200,7 @@ export default function DeliveryAssociatesScreen() {
         ) : associates.length === 0 ? (
           <View style={styles.emptyCard}>
             <View style={styles.emptyIcon}>
-              <Ionicons name="bicycle-outline" size={34} color={Colors.green} />
+              <Ionicons name="bicycle-outline" size={34} color={Colors.primary} />
             </View>
             <Text style={styles.emptyTitle}>No delivery associates yet</Text>
             <Text style={styles.emptyText}>Add an associate's name and WhatsApp contact number to start sharing delivery details.</Text>
@@ -211,13 +213,13 @@ export default function DeliveryAssociatesScreen() {
           return (
             <View key={associate.id} style={[styles.associateCard, !active && styles.inactiveCard]}>
               <View style={styles.associateIcon}>
-                <Ionicons name="person-outline" size={22} color={active ? Colors.green : Colors.muted} />
+                <Ionicons name="person-outline" size={22} color={active ? Colors.primary : Colors.muted} />
               </View>
               <View style={styles.associateInfo}>
                 <View style={styles.nameRow}>
                   <Text style={styles.associateName}>{associate.name}</Text>
                   <View style={[styles.statusBadge, active ? styles.activeBadge : styles.inactiveBadge]}>
-                    <Text style={[styles.statusText, { color: active ? Colors.green : Colors.muted }]}>{active ? "Active" : "Inactive"}</Text>
+                    <Text style={[styles.statusText, { color: active ? Colors.success : Colors.muted }]}>{active ? "Active" : "Inactive"}</Text>
                   </View>
                 </View>
                 <Text style={styles.associatePhone}>{associate.phone}</Text>
@@ -227,7 +229,7 @@ export default function DeliveryAssociatesScreen() {
                   <Ionicons name="create-outline" size={19} color={Colors.text} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => toggleActive(associate)} style={styles.iconButton}>
-                  <Ionicons name={active ? "pause-circle-outline" : "play-circle-outline"} size={20} color={active ? Colors.danger : Colors.green} />
+                  <Ionicons name={active ? "pause-circle-outline" : "play-circle-outline"} size={20} color={active ? Colors.danger : Colors.primary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -281,7 +283,7 @@ export default function DeliveryAssociatesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { paddingTop: 54, paddingHorizontal: 20, paddingBottom: 22, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  header: { paddingTop: 20, paddingHorizontal: 20, paddingBottom: 22, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   headerTop: { flexDirection: "row", alignItems: "center", gap: 12 },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.16)", alignItems: "center", justifyContent: "center" },
   title: { color: "#FFFFFF", fontSize: 25, fontWeight: "800" },
@@ -293,37 +295,37 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
   sectionTitle: { color: Colors.text, fontSize: 18, fontWeight: "800" },
   sectionSubtitle: { color: Colors.muted, fontSize: 11, lineHeight: 16, marginTop: 4 },
-  addButton: { backgroundColor: Colors.green, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, flexDirection: "row", alignItems: "center", gap: 5 },
+  addButton: { backgroundColor: Colors.primary, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, flexDirection: "row", alignItems: "center", gap: 5 },
   addButtonText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
   associateCard: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border, borderRadius: 17, padding: 14, marginBottom: 11, flexDirection: "row", alignItems: "center", gap: 11 },
   inactiveCard: { opacity: 0.62 },
-  associateIcon: { width: 43, height: 43, borderRadius: 14, backgroundColor: "#128C7E12", alignItems: "center", justifyContent: "center" },
+  associateIcon: { width: 43, height: 43, borderRadius: 14, backgroundColor: Colors.primaryLight, alignItems: "center", justifyContent: "center" },
   associateInfo: { flex: 1 },
   nameRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 7 },
   associateName: { color: Colors.text, fontSize: 14, fontWeight: "700" },
   associatePhone: { color: Colors.muted, fontSize: 12, marginTop: 5 },
   statusBadge: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 20 },
-  activeBadge: { backgroundColor: "#128C7E15" },
+  activeBadge: { backgroundColor: "#34C75915" },
   inactiveBadge: { backgroundColor: "#77777715" },
   statusText: { fontSize: 9, fontWeight: "800" },
   cardActions: { flexDirection: "row", gap: 4 },
   iconButton: { padding: 7 },
   emptyCard: { borderWidth: 1, borderColor: Colors.border, borderRadius: 18, padding: 25, alignItems: "center" },
-  emptyIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: "#128C7E12", alignItems: "center", justifyContent: "center" },
+  emptyIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.primaryLight, alignItems: "center", justifyContent: "center" },
   emptyTitle: { color: Colors.text, fontSize: 16, fontWeight: "700", marginTop: 14 },
   emptyText: { color: Colors.muted, fontSize: 12, lineHeight: 18, textAlign: "center", marginTop: 7 },
-  emptyAddButton: { backgroundColor: Colors.green, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 11, marginTop: 16 },
+  emptyAddButton: { backgroundColor: Colors.primary, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 11, marginTop: 16 },
   emptyAddText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
   footerNote: { color: Colors.muted, fontSize: 11, lineHeight: 16, marginTop: 10, textAlign: "center" },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
-  modalCard: { backgroundColor: "#FFFFFF", borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 22, paddingTop: 14, paddingBottom: 28 },
+  modalCard: { backgroundColor: "#FFFFFF", borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 22, paddingTop: 14, paddingBottom: 28, maxHeight: "90%" },
   modalHandle: { alignSelf: "center", width: 44, height: 5, borderRadius: 5, backgroundColor: "#DDDDDD", marginBottom: 18 },
   modalTitle: { color: Colors.text, fontSize: 21, fontWeight: "800" },
   modalSubtitle: { color: Colors.muted, fontSize: 12, lineHeight: 18, marginTop: 5, marginBottom: 18 },
   inputLabel: { color: Colors.muted, fontSize: 10, fontWeight: "800", letterSpacing: 0.8, marginBottom: 7, marginTop: 10 },
   input: { minHeight: 50, borderWidth: 1, borderColor: Colors.border, borderRadius: 13, paddingHorizontal: 13, color: Colors.text, fontSize: 14, backgroundColor: "#FAFAFA" },
   helperText: { color: Colors.muted, fontSize: 10, lineHeight: 15, marginTop: 7 },
-  saveButton: { backgroundColor: Colors.green, minHeight: 52, borderRadius: 14, justifyContent: "center", alignItems: "center", marginTop: 22 },
+  saveButton: { backgroundColor: Colors.primary, minHeight: 52, borderRadius: 14, justifyContent: "center", alignItems: "center", marginTop: 22 },
   saveButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
   cancelButton: { paddingVertical: 14, alignItems: "center" },
   cancelText: { color: Colors.muted, fontSize: 14, fontWeight: "600" },
