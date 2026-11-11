@@ -10,6 +10,7 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import "react-native-reanimated";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { auth, db } from "../firebase/config";
@@ -26,13 +27,11 @@ export default function RootLayout() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       try {
-        // No authenticated Firebase user
         if (!currentUser) {
           setUser(null);
           return;
         }
 
-        // Verify that the Firebase user is an authorized admin
         const adminRef = doc(db, "admins", currentUser.uid);
         const adminSnap = await getDoc(adminRef);
 
@@ -52,25 +51,17 @@ export default function RootLayout() {
           return;
         }
 
-        // Valid admin
         setUser(currentUser);
 
-        // Register push notification token
         try {
           const token = await registerForPushNotificationsAsync();
 
           if (token) {
-            await updateDoc(adminRef, {
-              expoPushToken: token,
-            });
-
+            await updateDoc(adminRef, { expoPushToken: token });
             console.log("Admin notification token saved.");
           }
         } catch (notificationError) {
-          console.log(
-            "Notification registration failed:",
-            notificationError
-          );
+          console.log("Notification registration failed:", notificationError);
         }
       } catch (error) {
         console.log("Authentication bootstrap failed:", error);
@@ -88,7 +79,6 @@ export default function RootLayout() {
 
     const firstSegment = segments[0];
 
-    // User is NOT authenticated
     if (!user) {
       if (firstSegment !== "login") {
         router.replace("/login");
@@ -96,7 +86,6 @@ export default function RootLayout() {
       return;
     }
 
-    // User IS authenticated
     if (!firstSegment || firstSegment === "login") {
       router.replace("/(tabs)/dashboard");
     }
@@ -107,20 +96,13 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider
-      value={
-        colorScheme === "dark"
-          ? DarkTheme
-          : DefaultTheme
-      }
-    >
-      <Stack
-        screenOptions={{
-          headerShown: false,
-        }}
-      />
-
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+          <Stack screenOptions={{ headerShown: false }} />
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }

@@ -1,18 +1,21 @@
 'use client';
 
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { addDoc, collection, getDocs, serverTimestamp } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { ref, uploadBytes } from "firebase/storage";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -45,17 +48,24 @@ const Colors = {
   danger: "#FF3B30",
 };
 
-const InputField = ({ 
-  icon, 
-  placeholder, 
-  value, 
-  onChangeText, 
+const InputField = ({
+  icon,
+  label,
+  helper,
+  placeholder,
+  value,
+  onChangeText,
   keyboardType = "default",
   required = false,
   multiline = false,
   numberOfLines = 1,
 }: any) => (
   <Animated.View entering={FadeInDown.delay(50).springify()} style={styles.inputWrapper}>
+    <View style={styles.fieldHeading}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      {required && <Text style={styles.fieldRequired}>Required</Text>}
+    </View>
+    {!!helper && <Text style={styles.fieldHelper}>{helper}</Text>}
     <View style={styles.inputContainer}>
       <Ionicons name={icon} size={20} color={Colors.muted} style={styles.inputIcon} />
       <TextInput
@@ -68,11 +78,6 @@ const InputField = ({
         multiline={multiline}
         numberOfLines={numberOfLines}
       />
-      {required && !value && value !== 0 && (
-        <View style={styles.requiredBadge}>
-          <Text style={styles.requiredText}>Required</Text>
-        </View>
-      )}
     </View>
   </Animated.View>
 );
@@ -82,6 +87,9 @@ export default function AddProductScreen() {
   const [price, setPrice] = useState("");
   const [mrp, setMrp] = useState("");
   const [image, setImage] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [imageUrlModalVisible, setImageUrlModalVisible] = useState(false);
+  const [imageUrlCopied, setImageUrlCopied] = useState(false);
   const [protext, setProtext] = useState("");
   const [rating, setRating] = useState("");
   const [unit, setUnit] = useState("");
@@ -90,6 +98,10 @@ export default function AddProductScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [category, setCategory] = useState("");
+  const [productType, setProductType] = useState<"branded" | "local">("local");
+  const [brandId, setBrandId] = useState("");
+  const [brands, setBrands] = useState<any[]>([]);
+  const [brandDropdownOpen, setBrandDropdownOpen] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -98,6 +110,7 @@ export default function AddProductScreen() {
 
   useEffect(() => {
     loadCategories();
+    loadBrands();
   }, []);
 
   const loadCategories = async () => {
@@ -121,21 +134,40 @@ console.log(
     }
   };
 
-  const uploadImage = async (uri: string) => {
+  const loadBrands = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, "brands"));
+      setBrands(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a: any, b: any) => String(a.name || "").localeCompare(String(b.name || ""))));
+    } catch (error) { console.log("Error loading brands:", error); }
+  };
+
+  const uploadImage = async (uri: string, mimeType?: string | null) => {
     try {
       setIsUploading(true);
       const response = await fetch(uri);
       const blob = await response.blob();
-      const fileName = `Products/${Date.now()}`;
-      const storageRef = ref(storage, fileName);
-      await uploadBytes(storageRef, blob);
-      const downloadURL = await getDownloadURL(storageRef);
-      setImage(downloadURL);
+      const uriExtension = uri.split("?")[0].split(".").pop()?.toLowerCase();
+      const mimeByExtension: Record<string, string> = {
+        jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp",
+      };
+      const contentType = (mimeType || blob.type || mimeByExtension[uriExtension || ""] || "").split(";")[0].toLowerCase();
+      const extensionByMime: Record<string, string> = {
+        "image/jpeg": "jpg", "image/jpg": "jpg", "image/png": "png", "image/webp": "webp",
+      };
+      const extension = extensionByMime[contentType];
+      if (!extension) throw new Error("Only JPEG, PNG, and WebP images are supported.");
+      const fileName = `Products/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+      await uploadBytes(ref(storage, fileName), blob, { contentType });
+      const functions = getFunctions(undefined, "asia-south1");
+      const optimizeImage = httpsCallable<{ storagePath: string }, { imageUrl: string; thumbnailUrl: string; imageBytes: number; thumbnailBytes: number }>(functions, "optimizeProductImage");
+      const optimized = await optimizeImage({ storagePath: fileName });
+      setImage(optimized.data.imageUrl);
+      setThumbnailUrl(optimized.data.thumbnailUrl);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Success", "Image uploaded successfully");
+      Alert.alert("Success", "Image uploaded and optimized successfully");
     } catch (error) {
-      console.log(error);
-      Alert.alert("Error", "Image upload error");
+      console.log("Image upload error:", error);
+      Alert.alert("Error", error instanceof Error ? error.message : "Image upload error");
     } finally {
       setIsUploading(false);
     }
@@ -156,7 +188,7 @@ console.log(
     });
 
     if (!result.canceled) {
-      await uploadImage(result.assets[0].uri);
+      await uploadImage(result.assets[0].uri, result.assets[0].mimeType);
     }
   };
 
@@ -174,16 +206,20 @@ console.log(
     });
 
     if (!result.canceled) {
-      await uploadImage(result.assets[0].uri);
+      await uploadImage(result.assets[0].uri, result.assets[0].mimeType);
     }
   };
 
   const saveProduct = async () => {
-    if (!name || !price || !mrp || !image || !category || Number(mrp) < Number(price)) {
+    if (isUploading) {
+      Alert.alert("Image Uploading", "Please wait until image upload and optimization are complete.");
+      return;
+    }
+    if (!name || !price || !mrp || !image || !category || Number(mrp) < Number(price) || (productType === "branded" && !brandId)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         "Missing Information",
-        "Please fill all required fields:\n• Product Name\n• MRP (must be ≥ Selling Price)\n• Selling Price\n• Image\n• Category"
+        `Please fill all required fields:\n• Product Name\n• MRP (must be ≥ Selling Price)\n• Selling Price\n• Image\n• Category${productType === "branded" ? "\n• Brand" : ""}`
       );
       return;
     }
@@ -195,12 +231,14 @@ console.log(
         mrp: Number(mrp),
         price: Number(price),
         image,
+        thumbnailUrl: thumbnailUrl || image,
         protext: protext || "",
         category,
         rating: Number(rating) || 0,
         unit: unit || "",
         stock: Number(stock) || 0,
         maxOrderQty: Number(maxOrderQty) || 0,
+        brandId: productType === "branded" ? brandId : null,
         createdAt: new Date(),
       });
 
@@ -298,14 +336,15 @@ console.log(
       </LinearGradient>
 
       <ScrollView
-        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Product Image Section */}
         <Animated.View entering={ZoomIn.delay(100)} style={styles.imageSection}>
           <Text style={styles.sectionTitle}>Product Image</Text>
-          <Text style={styles.sectionSubtitle}>Upload a photo of your product</Text>
+          <Text style={styles.sectionSubtitle}>Add the photo customers will see. Choose an image from your gallery or take a new photo.</Text>
           
           {image ? (
             <View style={styles.imagePreviewContainer}>
@@ -362,11 +401,26 @@ console.log(
           )}
         </Animated.View>
 
-        {/* Basic Information */}
-        <Animated.View entering={FadeInUp.delay(150)}>
-          <Text style={styles.sectionTitle}>Basic Information</Text>
+        {/* Basic Information — frosted glass container */}
+        <Animated.View entering={FadeInUp.delay(150)} style={styles.basicGlassWrap}>
+          <BlurView intensity={48} tint="light" style={styles.basicGlass}>
+            <LinearGradient
+              colors={["rgba(255,255,255,0.82)", "rgba(245,247,250,0.58)", "rgba(255,255,255,0.72)"]}
+              locations={[0, 0.52, 1]}
+              style={styles.basicGlassSheen}
+            >
+              <View style={styles.basicGlassHeader}>
+                <View style={styles.basicGlassIcon}>
+                  <Ionicons name="information-circle-outline" size={20} color={Colors.textPrimary} />
+                </View>
+                <View style={styles.basicGlassHeading}>
+                  <Text style={styles.basicGlassTitle}>Basic Information</Text>
+                  <Text style={styles.basicGlassSubtitle}>Product name, pricing and category</Text>
+                </View>
+              </View>
           <InputField
             icon="pricetag-outline"
+            label="Product name"
             placeholder="Product Name *"
             value={name}
             onChangeText={setName}
@@ -374,6 +428,7 @@ console.log(
           />
           <InputField
             icon="pricetag-outline"
+            label="MRP (Maximum Retail Price)"
             placeholder="MRP *"
             value={mrp}
             onChangeText={setMrp}
@@ -382,6 +437,7 @@ console.log(
           />
           <InputField
             icon="currency-inr"
+            label="Selling price"
             placeholder="Selling Price *"
             value={price}
             onChangeText={setPrice}
@@ -390,7 +446,7 @@ console.log(
           />
           
           {/* Category Dropdown */}
-          <Text style={styles.sectionTitle}>Category *</Text>
+          <Text style={styles.fieldLabelStandalone}>Product category *</Text>
           
           {!showNewCategory ? (
             <>
@@ -402,7 +458,7 @@ console.log(
                 }}
               >
                 <Text style={[styles.dropdownText, category ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder]}>
-                  {category || "Select Category"}
+                  {category || "Choose a category"}
                 </Text>
                 <Ionicons
                   name={dropdownOpen ? "chevron-up" : "chevron-down"}
@@ -431,26 +487,26 @@ console.log(
                     <View style={styles.dropdownDivider} />
                   )}
                   
-                 {categories.map(
-  (item:any) => (
-    <TouchableOpacity
-      key={item.id}
-      style={styles.dropdownItem}
-      onPress={() => {
-        setCategory(item.name);
-        setDropdownOpen(false);
-      }}
-    >
-      <Text
-        style={
-          styles.dropdownItemText
-        }
-      >
-        {item.name}
-      </Text>
-    </TouchableOpacity>
-  )
-)}
+                  <ScrollView
+                    style={styles.categoryList}
+                    nestedScrollEnabled
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator
+                  >
+                    {categories.map((item: any) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          setCategory(item.name);
+                          setDropdownOpen(false);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.dropdownItemText}>{item.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
 
                   {categories.length === 0 && (
                     <Text style={styles.dropdownEmptyText}>No categories yet. Tap &quot;Add New Category&quot; to create one.</Text>
@@ -462,7 +518,9 @@ console.log(
             <Animated.View entering={FadeInDown.springify()} style={styles.newCategoryContainer}>
               <InputField
                 icon="add-circle-outline"
-                placeholder="Enter new category name"
+                label="New category name"
+            helper="Create a category and assign this product to it."
+            placeholder="Enter new category name"
                 value={newCategory}
                 onChangeText={setNewCategory}
               />
@@ -498,38 +556,113 @@ console.log(
               </View>
             </Animated.View>
           )}
+              </LinearGradient>
+          </BlurView>
         </Animated.View>
 
-        {/* Inventory Details */}
-        <Animated.View entering={FadeInUp.delay(200)}>
-          <Text style={styles.sectionTitle}>Inventory Details</Text>
-          <InputField
-            icon="layers-outline"
-            placeholder="Stock Quantity"
-            value={stock}
-            onChangeText={setStock}
-            keyboardType="numeric"
-          />
-          <InputField
-            icon="alert-circle-outline"
-            placeholder="Max Order Quantity (0 = No Limit)"
-            value={maxOrderQty}
-            onChangeText={setMaxOrderQty}
-            keyboardType="numeric"
-          />
-          <InputField
-            icon="scale-outline"
-            placeholder="Unit (500g, 1kg, etc.)"
-            value={unit}
-            onChangeText={setUnit}
-          />
+
+        {/* Internal product classification */}
+        <Animated.View entering={FadeInUp.delay(175)}>
+          <Text style={styles.sectionTitle}>Product Classification</Text>
+          <Text style={styles.classificationHint}>Internal inventory setting. This is not shown as a label to customers.</Text>
+          <View style={styles.classificationRow}>
+            <TouchableOpacity style={[styles.classificationOption, productType === "branded" && styles.classificationOptionActive]} onPress={() => { setProductType("branded"); Haptics.selectionAsync(); }} activeOpacity={0.8}>
+              <Ionicons name="pricetag-outline" size={18} color={productType === "branded" ? "#FFFFFF" : Colors.textSecondary} />
+              <Text style={[styles.classificationOptionText, productType === "branded" && styles.classificationOptionTextActive]}>Branded</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.classificationOption, productType === "local" && styles.classificationOptionActive]} onPress={() => { setProductType("local"); setBrandId(""); Haptics.selectionAsync(); }} activeOpacity={0.8}>
+              <Ionicons name="storefront-outline" size={18} color={productType === "local" ? "#FFFFFF" : Colors.textSecondary} />
+              <Text style={[styles.classificationOptionText, productType === "local" && styles.classificationOptionTextActive]}>Local</Text>
+            </TouchableOpacity>
+          </View>
+          {productType === "branded" && <>
+            <Text style={styles.fieldLabelStandalone}>Brand *</Text>
+            <Text style={styles.fieldHelperStandalone}>Select the brand associated with this product. This is an internal catalogue link.</Text>
+            <TouchableOpacity style={styles.brandPicker} onPress={() => { loadBrands(); setBrandDropdownOpen(!brandDropdownOpen); }}>
+              <Text style={[styles.brandPickerText, !brandId && styles.brandPickerPlaceholder]}>{brands.find((brand: any) => brand.id === brandId)?.name || "Select a brand"}</Text>
+              <Ionicons name={brandDropdownOpen ? "chevron-up" : "chevron-down"} size={19} color={Colors.muted} />
+            </TouchableOpacity>
+            {brandDropdownOpen && <View style={styles.brandDropdown}>
+              {brands.filter((brand: any) => brand.isActive !== false).map((brand: any) => <TouchableOpacity key={brand.id} style={styles.brandDropdownItem} onPress={() => { setBrandId(brand.id); setBrandDropdownOpen(false); }}>
+                <Text style={styles.brandDropdownText}>{brand.name}</Text>
+                {brand.id === brandId && <Ionicons name="checkmark-circle" size={18} color={Colors.success} />}
+              </TouchableOpacity>)}
+              {!brands.some((brand: any) => brand.isActive !== false) && <Text style={styles.brandEmptyText}>No active brands. Add one in Manage Brands.</Text>}
+              <TouchableOpacity style={styles.manageBrandsLink} onPress={() => { setBrandDropdownOpen(false); router.push("/brands"); }}>
+                <Ionicons name="settings-outline" size={16} color={Colors.textPrimary} /><Text style={styles.manageBrandsText}>Manage Brands</Text>
+              </TouchableOpacity>
+            </View>}
+          </>}
         </Animated.View>
 
-        {/* Additional Details */}
-        <Animated.View entering={FadeInUp.delay(250)}>
-          <Text style={styles.sectionTitle}>Additional Details</Text>
+        {/* Inventory Details — frosted glass container */}
+        <Animated.View entering={FadeInUp.delay(200)} style={styles.inventoryGlassWrap}>
+          <BlurView intensity={48} tint="light" style={styles.inventoryGlass}>
+            <LinearGradient
+              colors={["rgba(255,255,255,0.82)", "rgba(245,247,250,0.58)", "rgba(255,255,255,0.72)"]}
+              locations={[0, 0.52, 1]}
+              style={styles.inventoryGlassSheen}
+            >
+              <View style={styles.inventoryGlassHeader}>
+                <View style={styles.inventoryGlassIcon}>
+                  <Ionicons name="cube-outline" size={20} color={Colors.textPrimary} />
+                </View>
+                <View style={styles.inventoryGlassHeading}>
+                  <Text style={styles.inventoryGlassTitle}>Inventory Details</Text>
+                  <Text style={styles.inventoryGlassSubtitle}>Manage stock, order limits and product size</Text>
+                </View>
+              </View>
+              <InputField
+                icon="layers-outline"
+                label="Available stock"
+                helper="How many units are currently available in inventory."
+                placeholder="Stock Quantity"
+                value={stock}
+                onChangeText={setStock}
+                keyboardType="numeric"
+              />
+              <InputField
+                icon="alert-circle-outline"
+                label="Maximum order quantity"
+                helper="Maximum units one customer can buy in a single order. Enter 0 for no limit."
+                placeholder="(0 = No Limit)"
+                value={maxOrderQty}
+                onChangeText={setMaxOrderQty}
+                keyboardType="numeric"
+              />
+              <InputField
+                icon="scale-outline"
+                label="Product unit / size"
+                helper="Describe the pack size or measurement, e.g. 500 g, 1 kg, 1 litre, or 1 pack."
+                placeholder="Unit (500g, 1kg, etc.)"
+                value={unit}
+                onChangeText={setUnit}
+              />
+            </LinearGradient>
+          </BlurView>
+        </Animated.View>
+
+        {/* Additional Details — frosted glass container */}
+        <Animated.View entering={FadeInUp.delay(250)} style={styles.additionalGlassWrap}>
+          <BlurView intensity={48} tint="light" style={styles.additionalGlass}>
+            <LinearGradient
+              colors={["rgba(255,255,255,0.82)", "rgba(245,247,250,0.58)", "rgba(255,255,255,0.72)"]}
+              locations={[0, 0.52, 1]}
+              style={styles.additionalGlassSheen}
+            >
+              <View style={styles.additionalGlassHeader}>
+                <View style={styles.additionalGlassIcon}>
+                  <Ionicons name="document-text-outline" size={20} color={Colors.textPrimary} />
+                </View>
+                <View style={styles.additionalGlassHeading}>
+                  <Text style={styles.additionalGlassTitle}>Additional Details</Text>
+                  <Text style={styles.additionalGlassSubtitle}>Description and product rating</Text>
+                </View>
+              </View>
           <InputField
             icon="document-text-outline"
+            label="Product description"
+            helper="Short details about the product. This can be shown on the customer product page."
             placeholder="Description"
             value={protext}
             onChangeText={setProtext}
@@ -538,22 +671,43 @@ console.log(
           />
           <InputField
             icon="star-outline"
+            label="Product rating"
+            helper="Optional rating from 0 to 5. Leave blank if you do not want to set one."
             placeholder="Rating (0-5)"
             value={rating}
             onChangeText={setRating}
             keyboardType="numeric"
           />
+            </LinearGradient>
+          </BlurView>
         </Animated.View>
 
         {/* Image URL (Advanced) */}
-        <Animated.View entering={FadeInUp.delay(300)}>
+        <Animated.View entering={FadeInUp.delay(300)} style={styles.imageUrlSection}>
           <Text style={styles.sectionTitle}>Advanced</Text>
-          <InputField
-            icon="link-outline"
-            placeholder="Image URL (Optional - leave empty if using upload)"
-            value={image}
-            onChangeText={setImage}
-          />
+          <Text style={styles.fieldLabel}>Image URL</Text>
+          <Text style={styles.fieldHelper}>The image URL stays hidden until you choose to view it. Leave it blank when you upload an image above.</Text>
+          <TouchableOpacity
+            style={styles.imageUrlTrigger}
+            activeOpacity={0.82}
+            onPress={() => Alert.alert(
+              "Image URL",
+              "Would you like to view or edit the image URL?",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Show URL", onPress: () => { setImageUrlCopied(false); setImageUrlModalVisible(true); } },
+              ]
+            )}
+          >
+            <View style={styles.imageUrlTriggerIcon}>
+              <Ionicons name="link-outline" size={19} color={Colors.textPrimary} />
+            </View>
+            <View style={styles.imageUrlTriggerTextWrap}>
+              <Text style={styles.imageUrlTriggerTitle}>Show URL</Text>
+              <Text style={styles.imageUrlTriggerSubtitle}>{image ? "Image URL is set" : "No image URL added"}</Text>
+            </View>
+            <Ionicons name="eye-outline" size={20} color={Colors.textSecondary} />
+          </TouchableOpacity>
         </Animated.View>
 
         {/* Save Button */}
@@ -584,11 +738,107 @@ console.log(
 
         <View style={{ height: 40 }} />
       </ScrollView>
+        <Modal
+          visible={imageUrlModalVisible}
+          transparent
+          statusBarTranslucent
+          animationType="none"
+          onRequestClose={() => setImageUrlModalVisible(false)}
+        >
+          <View style={styles.imageUrlModalRoot}>
+            <BlurView intensity={75} tint="light" style={StyleSheet.absoluteFill} />
+            <TouchableOpacity
+              style={styles.imageUrlModalBackdrop}
+              activeOpacity={1}
+              onPress={() => setImageUrlModalVisible(false)}
+            />
+            <View style={styles.imageUrlModalCard}>
+              <BlurView intensity={65} tint="light" style={styles.imageUrlModalGlass}>
+                <LinearGradient
+                  colors={["rgba(255,255,255,0.94)", "rgba(245,247,250,0.86)", "rgba(255,255,255,0.92)"]}
+                  style={styles.imageUrlModalContent}
+                >
+                  <View style={styles.imageUrlModalHeader}>
+                    <View style={styles.imageUrlModalIcon}>
+                      <Ionicons name="link-outline" size={21} color={Colors.textPrimary} />
+                    </View>
+                    <View style={styles.imageUrlModalHeading}>
+                      <Text style={styles.imageUrlModalTitle}>Image URL</Text>
+                      <Text style={styles.imageUrlModalSubtitle}>View, edit or copy the image link</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setImageUrlModalVisible(false)} style={styles.imageUrlCloseButton}>
+                      <Ionicons name="close" size={20} color={Colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.imageUrlInputLabel}>IMAGE LINK</Text>
+                  <TextInput
+                    style={styles.imageUrlModalInput}
+                    value={image}
+                    onChangeText={(value) => { setImage(value); setImageUrlCopied(false); }}
+                    placeholder="Paste image URL here"
+                    placeholderTextColor={Colors.muted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="url"
+                    multiline
+                    textAlignVertical="top"
+                  />
+                  <TouchableOpacity
+                    style={styles.imageUrlCopyButton}
+                    activeOpacity={0.84}
+                    disabled={!image.trim()}
+                    onPress={async () => {
+                      try {
+                        await setStringAsync(image.trim());
+                        setImageUrlCopied(true);
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      } catch {
+                        Alert.alert("Copy failed", "The image URL could not be copied. Please try again.");
+                      }
+                    }}
+                  >
+                    <LinearGradient
+                      colors={imageUrlCopied ? ["#1F9D62", "#16834F"] : [Colors.primary, Colors.accent]}
+                      style={styles.imageUrlCopyGradient}
+                    >
+                      <Ionicons name={imageUrlCopied ? "checkmark-circle-outline" : "copy-outline"} size={18} color="#FFFFFF" />
+                      <Text style={styles.imageUrlCopyText}>{imageUrlCopied ? "Copied to clipboard" : "Copy URL"}</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </BlurView>
+            </View>
+          </View>
+        </Modal>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  fieldHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 5 },
+  fieldLabel: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
+  fieldRequired: { fontSize: 10, fontWeight: "700", color: Colors.danger, textTransform: "uppercase", letterSpacing: 0.5 },
+  fieldHelper: { fontSize: 11, color: Colors.muted, lineHeight: 16, marginBottom: 7 },
+  fieldLabelStandalone: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary, marginTop: 4, marginBottom: 5 },
+  fieldHelperStandalone: { fontSize: 11, color: Colors.muted, lineHeight: 16, marginBottom: 9 },
+
+  classificationHint: { fontSize: 12, color: Colors.muted, marginBottom: 10, lineHeight: 18 },
+  classificationRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
+  classificationOption: { flex: 1, minHeight: 48, borderWidth: 1, borderColor: Colors.separator, borderRadius: 13, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.surface },
+  classificationOptionActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  classificationOptionText: { color: Colors.textSecondary, fontSize: 14, fontWeight: "600" },
+  classificationOptionTextActive: { color: "#FFFFFF" },
+  brandFieldLabel: { fontSize: 11, letterSpacing: 1, fontWeight: "700", color: Colors.muted, marginBottom: 7, marginTop: 4 },
+  brandPicker: { minHeight: 50, borderWidth: 1, borderColor: Colors.separator, borderRadius: 13, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: Colors.card },
+  brandPickerText: { fontSize: 14, color: Colors.textPrimary },
+  brandPickerPlaceholder: { color: Colors.muted },
+  brandDropdown: { borderWidth: 1, borderColor: Colors.separator, borderRadius: 13, marginTop: 7, overflow: "hidden", backgroundColor: Colors.card },
+  brandDropdownItem: { minHeight: 44, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: Colors.separator },
+  brandDropdownText: { fontSize: 14, color: Colors.textPrimary },
+  brandEmptyText: { padding: 14, color: Colors.muted, fontSize: 12 },
+  manageBrandsLink: { minHeight: 44, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.surface },
+  manageBrandsText: { fontSize: 13, fontWeight: "600", color: Colors.textPrimary },
+
   container: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -743,6 +993,292 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
 
+  // Frosted liquid-glass basic information panel
+  basicGlassWrap: {
+    marginTop: 4,
+    marginBottom: 20,
+    borderRadius: 26,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 22,
+    elevation: 7,
+  },
+  basicGlass: {
+    borderRadius: 26,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.92)",
+    backgroundColor: "rgba(255,255,255,0.68)",
+  },
+  basicGlassSheen: {
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.48)",
+    borderRadius: 26,
+  },
+  basicGlassHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 18,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(100,116,139,0.14)",
+  },
+  basicGlassIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.76)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.95)",
+  },
+  basicGlassHeading: {
+    flex: 1,
+  },
+  basicGlassTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    letterSpacing: -0.3,
+  },
+  basicGlassSubtitle: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 3,
+  },
+
+  // Frosted liquid-glass additional details panel
+  additionalGlassWrap: {
+    marginTop: 4,
+    marginBottom: 20,
+    borderRadius: 26,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 22,
+    elevation: 7,
+  },
+  additionalGlass: {
+    borderRadius: 26,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.92)",
+    backgroundColor: "rgba(255,255,255,0.68)",
+  },
+  additionalGlassSheen: {
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.48)",
+    borderRadius: 26,
+  },
+  additionalGlassHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 18,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(100,116,139,0.14)",
+  },
+  additionalGlassIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.76)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.95)",
+  },
+  additionalGlassHeading: { flex: 1 },
+  additionalGlassTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    letterSpacing: -0.3,
+  },
+  additionalGlassSubtitle: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 3,
+  },
+
+  imageUrlSection: { marginBottom: 8 },
+  imageUrlTrigger: {
+    minHeight: 64,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.95)",
+    backgroundColor: "rgba(245,247,250,0.78)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
+  },
+  imageUrlTriggerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageUrlTriggerTextWrap: { flex: 1 },
+  imageUrlTriggerTitle: { fontSize: 14, fontWeight: "700", color: Colors.textPrimary },
+  imageUrlTriggerSubtitle: { fontSize: 11, color: Colors.muted, marginTop: 3 },
+  imageUrlModalRoot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 22,
+    backgroundColor: "rgba(20,25,35,0.16)",
+  },
+  imageUrlModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  imageUrlModalCard: {
+    width: "100%",
+    maxWidth: 520,
+    borderRadius: 28,
+    shadowColor: "#263449",
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.2,
+    shadowRadius: 28,
+    elevation: 18,
+  },
+  imageUrlModalGlass: {
+    borderRadius: 28,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.96)",
+    backgroundColor: "rgba(255,255,255,0.76)",
+  },
+  imageUrlModalContent: {
+    padding: 20,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.7)",
+  },
+  imageUrlModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    gap: 11,
+  },
+  imageUrlModalIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.96)",
+  },
+  imageUrlModalHeading: { flex: 1 },
+  imageUrlModalTitle: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary },
+  imageUrlModalSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 3 },
+  imageUrlCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.84)",
+  },
+  imageUrlInputLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
+    color: Colors.muted,
+    marginBottom: 8,
+  },
+  imageUrlModalInput: {
+    minHeight: 104,
+    maxHeight: 180,
+    padding: 13,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.25)",
+    backgroundColor: "rgba(255,255,255,0.76)",
+    color: Colors.textPrimary,
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 16,
+  },
+  imageUrlCopyButton: { borderRadius: 15, overflow: "hidden" },
+  imageUrlCopyGradient: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 9,
+  },
+  imageUrlCopyText: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
+
+  // Frosted liquid-glass inventory panel
+  inventoryGlassWrap: {
+    marginTop: 4,
+    marginBottom: 20,
+    borderRadius: 26,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 22,
+    elevation: 7,
+  },
+  inventoryGlass: {
+    borderRadius: 26,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.92)",
+    backgroundColor: "rgba(255,255,255,0.68)",
+  },
+  inventoryGlassSheen: {
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.48)",
+    borderRadius: 26,
+  },
+  inventoryGlassHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 18,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(100,116,139,0.14)",
+  },
+  inventoryGlassIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.76)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.95)",
+  },
+  inventoryGlassHeading: {
+    flex: 1,
+  },
+  inventoryGlassTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    letterSpacing: -0.3,
+  },
+  inventoryGlassSubtitle: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 3,
+  },
+
   // Input Fields
   inputWrapper: {
     marginBottom: 12,
@@ -813,6 +1349,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: 12,
     maxHeight: 250,
+  },
+  categoryList: {
+    maxHeight: 190,
+    flexGrow: 0,
   },
   dropdownItem: {
     flexDirection: "row",

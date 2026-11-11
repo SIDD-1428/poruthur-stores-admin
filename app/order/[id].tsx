@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { collection, doc, onSnapshot, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { Image } from "expo-image";
 import {
@@ -224,6 +224,10 @@ function InfoCard({
 export default function OrderDetails() {
   const { id } = useLocalSearchParams();
   const [order, setOrder] = useState<any>(null);
+  const [deliveryAssociates, setDeliveryAssociates] = useState<any[]>([]);
+  const [showAssociateModal, setShowAssociateModal] = useState(false);
+  const [selectedAssociate, setSelectedAssociate] = useState<any>(null);
+  const [dispatchAfterAssociateSelection, setDispatchAfterAssociateSelection] = useState(false);
   const [showPinModal, setShowPinModal]=useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -264,6 +268,104 @@ export default function OrderDetails() {
 
     return () => unsub();
   }, [id]);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "deliveryAssociates"),
+      (snapshot) => {
+        const activeAssociates = snapshot.docs
+          .map((associateDoc) => ({ id: associateDoc.id, ...associateDoc.data() }))
+          .filter((associate: any) => associate.isActive !== false)
+          .sort((a: any, b: any) => String(a.name || "").localeCompare(String(b.name || "")));
+        setDeliveryAssociates(activeAssociates);
+      },
+      (error) => console.error("DELIVERY ASSOCIATES ERROR:", error)
+    );
+
+    return unsubscribe;
+  }, []);
+
+  const getDeliveryMapsLink = () => {
+    const latitude = order?.address?.latitude;
+    const longitude = order?.address?.longitude;
+    if (latitude != null && longitude != null) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${latitude},${longitude}`)}`;
+    }
+    const addressText = [order?.address?.address, order?.address?.landmark].filter(Boolean).join(", ");
+    return addressText
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressText)}`
+      : "";
+  };
+
+  const getDeliveryMessage = () => {
+    const orderCode = String(order?.id || "").slice(0, 8).toUpperCase();
+    const customerPhone = order?.customerPhone || order?.address?.phone || "Not provided";
+    const addressLines = [
+      order?.address?.type ? `${order.address.type} Address` : "Delivery Address",
+      order?.address?.address,
+      order?.address?.landmark ? `Landmark: ${order.address.landmark}` : "",
+      order?.address?.instructions ? `Instructions: ${order.address.instructions}` : "",
+    ].filter(Boolean);
+    const mapsLink = getDeliveryMapsLink();
+    const total = Number(order?.pricing?.grandTotal ?? order?.total ?? 0);
+    const paymentMethod = order?.payment?.method || "Not specified";
+
+    return [
+      "🚚 *BonMart Delivery Assignment*",
+      "",
+      `Hello ${selectedAssociate?.name || "Delivery Associate"},`,
+      "Please deliver the following customer order:",
+      "",
+      `*Order No:* #${orderCode}`,
+      `*Customer:* ${order?.customerName || "Customer"}`,
+      `*Customer Contact:* ${customerPhone}`,
+      "*Delivery Address:*",
+      ...addressLines,
+      mapsLink ? `*Google Maps:* ${mapsLink}` : "*Google Maps:* Location link unavailable",
+      "",
+      `*Payment:* ${paymentMethod}`,
+      `*Order Total:* ₹${total.toFixed(2)}`,
+      "",
+      "Please confirm once the order has been delivered.",
+      "Thank you,",
+      "*Team BonMart*",
+    ].join("\n");
+  };
+
+  const openDeliveryWhatsApp = async () => {
+    if (!selectedAssociate) return;
+    let associatePhone = String(selectedAssociate.phone || "").replace(/\D/g, "");
+    if (associatePhone.length === 10) associatePhone = `91${associatePhone}`;
+    if (associatePhone.length < 10 || associatePhone.length > 15) {
+      Alert.alert("Invalid contact", "This delivery associate does not have a valid WhatsApp number.");
+      return;
+    }
+
+    const dispatchingNow = dispatchAfterAssociateSelection;
+    const url = `https://wa.me/${associatePhone}?text=${encodeURIComponent(getDeliveryMessage())}`;
+    try {
+      await updateDoc(doc(db, "orders", id as string), {
+        ...(dispatchingNow ? { status: "Out For Delivery" } : {}),
+        "delivery.associateId": selectedAssociate.id,
+        "delivery.associateName": selectedAssociate.name,
+        "delivery.associatePhone": selectedAssociate.phone,
+        "delivery.assignedAt": new Date(),
+      });
+
+      setShowAssociateModal(false);
+      setSelectedAssociate(null);
+      setDispatchAfterAssociateSelection(false);
+
+      if (dispatchingNow) {
+        await navigateToCustomer();
+      }
+
+      await Linking.openURL(url);
+    } catch (error) {
+      console.error("DELIVERY ASSIGNMENT / WHATSAPP ERROR:", error);
+      Alert.alert("Unable to share delivery details", "The associate assignment may not have been saved. Please check the order and try again.");
+    }
+  };
 
   const navigateToCustomer = async () => {
     const latitude = order?.address?.latitude;
@@ -308,12 +410,14 @@ export default function OrderDetails() {
         return;
       }
 
-      await updateDoc(doc(db, "orders", id as string), { status });
-
       if (status === "Out For Delivery") {
-        await navigateToCustomer();
+        setDispatchAfterAssociateSelection(true);
+        setSelectedAssociate(null);
+        setShowAssociateModal(true);
+        return;
       }
 
+      await updateDoc(doc(db, "orders", id as string), { status });
       Alert.alert("Updated", `Order marked as ${status}`);
     } catch (e) {
       console.log(e);
@@ -686,17 +790,27 @@ Team BonMart`;
           </InfoCard>
         ) : null}
 
-        {order.status==="Out For Delivery" && (
-          <TouchableOpacity style={styles.printBtn}
-          onPress={navigateToCustomer}>
-            <LinearGradient colors={["#34C759","#2FB75A"]}
-            style={styles.printBtnGradient}>
-              <Ionicons name="navigate-outline" size={20} color="#FFF"/>
-              <Text style={styles.printBtnText}>
-                Navigate to Customer
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
+        {order.status === "Out For Delivery" && (
+          <View style={{ gap: 10, marginBottom: 12 }}>
+            <TouchableOpacity style={styles.printBtn} onPress={navigateToCustomer}>
+              <LinearGradient colors={["#34C759", "#2FB75A"]} style={styles.printBtnGradient}>
+                <Ionicons name="navigate-outline" size={20} color="#FFF" />
+                <Text style={styles.printBtnText}>Navigate to Customer</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.printBtn, { marginBottom: 0 }]}
+              onPress={() => {
+                setSelectedAssociate(null);
+                setShowAssociateModal(true);
+              }}
+            >
+              <LinearGradient colors={["#128C7E", "#075E54"]} style={styles.printBtnGradient}>
+                <Ionicons name="logo-whatsapp" size={20} color="#FFF" />
+                <Text style={styles.printBtnText}>Share Delivery Details</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         )}
 
         <InfoCard icon="receipt-outline" iconColor={Colors.primary} label="Order Info" delay={160}>
@@ -904,6 +1018,78 @@ Team BonMart`;
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal
+        visible={showAssociateModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setShowAssociateModal(false);
+          setSelectedAssociate(null);
+          setDispatchAfterAssociateSelection(false);
+        }}
+      >
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 26, borderTopRightRadius: 26, maxHeight: "88%", paddingHorizontal: 20, paddingTop: 14, paddingBottom: Math.max(insets.bottom, 20), flexShrink: 1 }}>
+            <View style={{ alignSelf: "center", width: 44, height: 5, borderRadius: 5, backgroundColor: "#DDDDDD", marginBottom: 18 }} />
+            <ScrollView style={{ flexGrow: 0, flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 10 }} nestedScrollEnabled showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            {!selectedAssociate ? (
+              <>
+                <Text style={{ fontSize: 21, fontWeight: "700", color: Colors.textPrimary }}>Choose delivery associate</Text>
+                <Text style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 6, marginBottom: 16 }}>Select who will receive this order's delivery details on WhatsApp.</Text>
+                <View>
+                  {deliveryAssociates.length === 0 ? (
+                    <View style={{ alignItems: "center", paddingVertical: 28 }}>
+                      <Ionicons name="bicycle-outline" size={42} color={Colors.muted} />
+                      <Text style={{ fontSize: 15, fontWeight: "600", color: Colors.textPrimary, marginTop: 12 }}>No active delivery associates</Text>
+                      <Text style={{ fontSize: 12, color: Colors.muted, textAlign: "center", marginTop: 6 }}>Add delivery associates from Settings to share delivery details.</Text>
+                      <TouchableOpacity onPress={() => { setShowAssociateModal(false); router.push("/delivery-associates"); }} style={{ marginTop: 16, padding: 12 }}>
+                        <Text style={{ color: "#128C7E", fontWeight: "700" }}>Manage delivery associates</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : deliveryAssociates.map((associate: any) => (
+                    <TouchableOpacity
+                      key={associate.id}
+                      onPress={() => setSelectedAssociate(associate)}
+                      style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.separator, gap: 12 }}
+                    >
+                      <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: "#128C7E15", alignItems: "center", justifyContent: "center" }}>
+                        <Ionicons name="bicycle-outline" size={21} color="#128C7E" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: Colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{associate.name}</Text>
+                        <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 3 }}>{associate.phone}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={Colors.muted} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity onPress={() => setSelectedAssociate(null)} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                  <Ionicons name="chevron-back" size={18} color={Colors.primary} />
+                  <Text style={{ color: Colors.textSecondary, fontWeight: "600" }}>Choose another associate</Text>
+                </TouchableOpacity>
+                <Text style={{ fontSize: 21, fontWeight: "700", color: Colors.textPrimary }}>Review delivery message</Text>
+                <Text style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 5, marginBottom: 12 }}>To: {selectedAssociate.name} · {selectedAssociate.phone}</Text>
+                <View style={{ backgroundColor: "#F5F5F5", borderRadius: 14, padding: 13 }}>
+                  <Text selectable style={{ fontSize: 12, lineHeight: 19, color: Colors.textPrimary }}>{getDeliveryMessage()}</Text>
+                </View>
+                <Text style={{ color: Colors.muted, fontSize: 11, lineHeight: 16, marginTop: 10 }}>WhatsApp will open with this message filled in. Review it and press Send yourself; nothing is sent automatically.</Text>
+                <TouchableOpacity onPress={openDeliveryWhatsApp} activeOpacity={0.85} style={{ backgroundColor: "#25D366", minHeight: 52, borderRadius: 14, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 9, marginTop: 14 }}>
+                  <Ionicons name="logo-whatsapp" size={20} color="#FFFFFF" />
+                  <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>Open WhatsApp</Text>
+                </TouchableOpacity>
+              </>
+            )}
+            </ScrollView>
+            <TouchableOpacity onPress={() => { setShowAssociateModal(false); setSelectedAssociate(null); setDispatchAfterAssociateSelection(false); }} style={{ alignItems: "center", paddingVertical: 14, marginTop: 4 }}>
+              <Text style={{ color: Colors.textSecondary, fontWeight: "600" }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
       <Modal
