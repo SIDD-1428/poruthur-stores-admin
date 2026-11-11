@@ -300,7 +300,7 @@ export default function OrderDetails() {
     const orderCode = String(order?.id || "").slice(0, 8).toUpperCase();
     const items = Array.isArray(order?.items) ? order.items : [];
     const totalQuantity = items.reduce((sum: number, item: any) => sum + Math.max(0, Number(item.quantity) || 1), 0);
-    const itemLines = items.map((item: any) => `• ${item.name || "Item"} × ${Number(item.quantity) || 1}`).join("\\n");
+    const itemLines = items.map((item: any) => `• ${item.name || "Item"} × ${Number(item.quantity) || 1}`).join("\n");
     const customerPhone = order?.customerPhone || order?.address?.phone || "Not provided";
     const addressLines = [
       order?.address?.type ? `${order.address.type} Address` : "Delivery Address",
@@ -336,12 +336,12 @@ export default function OrderDetails() {
       "Please confirm once the order has been delivered.",
       "Thank you,",
       "*Team BonMart*",
-    ].join("\\n");
+    ].join("\n");
   };
 
   const openDeliveryWhatsApp = async () => {
     if (!selectedAssociate) return;
-    let associatePhone = String(selectedAssociate.phone || "").replace(/\\D/g, "");
+    let associatePhone = String(selectedAssociate.phone || "").replace(/\D/g, "");
     if (associatePhone.length === 10) associatePhone = `91${associatePhone}`;
     if (associatePhone.length < 10 || associatePhone.length > 15) {
       Alert.alert("Invalid contact", "This delivery associate does not have a valid WhatsApp number.");
