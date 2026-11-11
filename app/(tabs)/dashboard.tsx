@@ -393,8 +393,8 @@ export default function Dashboard() {
             <View style={styles.recentOrdersContainer}>
                 <View style={styles.recentOrdersHeading}>
                     <View>
-                        <Text style={styles.sectionTitle}>Pending Deliveries</Text>
-                        <Text style={styles.sectionSubtitle}>
+                        <Text style={styles.pendingDeliveryTitle}>Pending Deliveries</Text>
+                        <Text style={styles.pendingDeliverySubtitle}>
                             {pendingDeliveryOrders.length} order{pendingDeliveryOrders.length === 1 ? "" : "s"} awaiting delivery
                         </Text>
                     </View>
@@ -440,7 +440,7 @@ export default function Dashboard() {
                                         ]}>
                                             <View style={[
                                                 styles.statusDot,
-                                                { backgroundColor: order.status === "Pending" ? Colors.warning : Colors.info },
+                                                { backgroundColor: order.status === "Pending" ? Colors.warning : Colors.textSecondary },
                                             ]} />
                                             <Text style={styles.orderStatusText}>{order.status || "Processing"}</Text>
                                         </View>
@@ -753,6 +753,16 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
+    },
+    pendingDeliveryTitle: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: Colors.textPrimary,
+        marginBottom: 2,
+    },
+    pendingDeliverySubtitle: {
+        fontSize: 11,
+        color: Colors.muted,
     },
     pendingDeliveryCount: {
         minWidth: 30,
