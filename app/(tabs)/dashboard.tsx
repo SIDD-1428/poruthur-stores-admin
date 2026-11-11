@@ -151,7 +151,10 @@ export default function Dashboard() {
         return orders.filter((order) => order.status === "Pending").length;
     }, [orders]);
 
-    const recentOrders = orders.slice(0, 5);
+    // Show every active order that has not yet been delivered or cancelled.
+    const pendingDeliveryOrders = orders.filter(
+        (order) => order.status !== "Delivered" && order.status !== "Cancelled"
+    );
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -386,64 +389,72 @@ export default function Dashboard() {
                 </Animated.View>
             </View>
 
-            {/* ── Recent Orders ── */}
+            {/* ── Pending Deliveries ── */}
             <View style={styles.recentOrdersContainer}>
-            <View style={styles.recentOrdersHeading}>
-                <Text style={styles.sectionTitle}>Recent Orders</Text>
-                <Text style={styles.sectionSubtitle}>Latest transactions</Text>
-            </View>
+                <View style={styles.recentOrdersHeading}>
+                    <View>
+                        <Text style={styles.sectionTitle}>Pending Deliveries</Text>
+                        <Text style={styles.sectionSubtitle}>
+                            {pendingDeliveryOrders.length} order{pendingDeliveryOrders.length === 1 ? "" : "s"} awaiting delivery
+                        </Text>
+                    </View>
+                    <View style={styles.pendingDeliveryCount}>
+                        <Text style={styles.pendingDeliveryCountText}>{pendingDeliveryOrders.length}</Text>
+                    </View>
+                </View>
 
-            {recentOrders.length === 0 ? (
-                <Animated.View entering={ZoomIn.delay(550)} style={styles.emptyCard}>
-                    <Ionicons name="receipt-outline" size={48} color={Colors.muted} />
-                    <Text style={styles.emptyText}>No orders yet</Text>
-                </Animated.View>
-            ) : (
-                recentOrders.map((order, index) => (
-                    <Animated.View
-                        key={order.id}
-                        entering={FadeInDown.delay(550 + index * 50).springify()}
+                {pendingDeliveryOrders.length === 0 ? (
+                    <View style={styles.compactEmptyState}>
+                        <Ionicons name="checkmark-circle-outline" size={22} color={Colors.success} />
+                        <Text style={styles.compactEmptyText}>All orders have been delivered</Text>
+                    </View>
+                ) : (
+                    <ScrollView
+                        style={styles.pendingOrdersScroll}
+                        contentContainerStyle={styles.pendingOrdersContent}
+                        nestedScrollEnabled
+                        showsVerticalScrollIndicator
                     >
-                        <TouchableOpacity
-                            style={styles.orderCard}
-                            onPress={() => handleNavigation(`/order/${order.id}`)}
-                            activeOpacity={0.7}
-                        >
-                            <View style={styles.orderGradient}>
-                                <View style={styles.orderHeader}>
-                                    <View>
-                                        <Text style={styles.orderId}>#{order.id.slice(0, 8).toUpperCase()}</Text>
-                                        <Text style={styles.orderDate}>
-                                            {order.createdAt?.toDate
-                                                ? order.createdAt.toDate().toLocaleDateString("en-IN")
-                                                : "Just now"}
-                                        </Text>
-                                    </View>
-                                    <View style={[
-                                        styles.orderStatus,
-                                        order.status === "Delivered" && styles.statusDelivered,
-                                        order.status === "Pending" && styles.statusPending,
-                                        order.status === "Cancelled" && styles.statusCancelled,
-                                    ]}>
+                        {pendingDeliveryOrders.map((order, index) => (
+                            <Animated.View
+                                key={order.id}
+                                entering={FadeInDown.delay(550 + index * 35).springify()}
+                            >
+                                <TouchableOpacity
+                                    style={styles.compactOrderCard}
+                                    onPress={() => handleNavigation(`/order/${order.id}`)}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={styles.compactOrderMain}>
+                                        <View style={styles.compactOrderInfo}>
+                                            <Text style={styles.orderId}>#{order.id.slice(0, 8).toUpperCase()}</Text>
+                                            <Text style={styles.orderDate}>
+                                                {order.createdAt?.toDate
+                                                    ? order.createdAt.toDate().toLocaleDateString("en-IN")
+                                                    : "Just now"}
+                                            </Text>
+                                        </View>
                                         <View style={[
-                                            styles.statusDot,
-                                            order.status === "Delivered" && { backgroundColor: Colors.success },
-                                            order.status === "Pending" && { backgroundColor: Colors.warning },
-                                            order.status === "Cancelled" && { backgroundColor: Colors.danger },
-                                        ]} />
-                                        <Text style={styles.orderStatusText}>{order.status}</Text>
+                                            styles.orderStatus,
+                                            order.status === "Pending" && styles.statusPending,
+                                        ]}>
+                                            <View style={[
+                                                styles.statusDot,
+                                                { backgroundColor: order.status === "Pending" ? Colors.warning : Colors.info },
+                                            ]} />
+                                            <Text style={styles.orderStatusText}>{order.status || "Processing"}</Text>
+                                        </View>
                                     </View>
-                                </View>
-                                <View style={styles.orderFooter}>
-                                    <Text style={styles.orderAmount}>₹{order.total}</Text>
-                                    <Text style={styles.orderItems}>{order.items?.length || 0} items</Text>
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    </Animated.View>
-                ))
-            )}
-
+                                    <View style={styles.compactOrderFooter}>
+                                        <Text style={styles.compactOrderAmount}>₹{order.total}</Text>
+                                        <Text style={styles.orderItems}>{order.items?.length || 0} items</Text>
+                                        <Ionicons name="chevron-forward" size={16} color={Colors.muted} />
+                                    </View>
+                                </TouchableOpacity>
+                            </Animated.View>
+                        ))}
+                    </ScrollView>
+                )}
             </View>
 
             {/* ── Low Stock Alerts ── */}
@@ -728,17 +739,84 @@ const styles = StyleSheet.create({
 
     recentOrdersContainer: {
         marginHorizontal: 16,
-        marginTop: 24,
-        paddingVertical: 18,
-        paddingHorizontal: 14,
-        borderRadius: 20,
+        marginTop: 20,
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        borderRadius: 16,
         borderWidth: 1,
         borderColor: Colors.separator,
         backgroundColor: Colors.card,
     },
     recentOrdersHeading: {
-        marginBottom: 16,
+        marginBottom: 10,
         paddingHorizontal: 2,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+    },
+    pendingDeliveryCount: {
+        minWidth: 30,
+        height: 30,
+        paddingHorizontal: 8,
+        borderRadius: 15,
+        backgroundColor: Colors.primaryLight,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    pendingDeliveryCountText: {
+        color: Colors.textPrimary,
+        fontSize: 13,
+        fontWeight: "700",
+    },
+    pendingOrdersScroll: {
+        height: 190,
+    },
+    pendingOrdersContent: {
+        paddingBottom: 2,
+    },
+    compactOrderCard: {
+        marginBottom: 7,
+        paddingHorizontal: 11,
+        paddingVertical: 9,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: Colors.separator,
+        backgroundColor: Colors.surface,
+    },
+    compactOrderMain: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+    },
+    compactOrderInfo: {
+        flex: 1,
+    },
+    compactOrderFooter: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginTop: 7,
+        paddingTop: 6,
+        borderTopWidth: 1,
+        borderTopColor: Colors.separator,
+    },
+    compactOrderAmount: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: Colors.textPrimary,
+        flex: 1,
+    },
+    compactEmptyState: {
+        minHeight: 54,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+    },
+    compactEmptyText: {
+        fontSize: 12,
+        color: Colors.muted,
+        fontWeight: "500",
     },
 
     // Order Cards
