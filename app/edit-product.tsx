@@ -16,7 +16,8 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { ref, uploadBytes } from "firebase/storage";
 import React, {
   useEffect,
   useState,
@@ -100,6 +101,7 @@ export default function EditProductScreen() {
   const [price, setPrice] = useState("");
   const [mrp, setMrp] = useState("");
   const [image, setImage] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [imageUrlModalVisible, setImageUrlModalVisible] = useState(false);
   const [imageUrlCopied, setImageUrlCopied] = useState(false);
   const [protext, setProtext] = useState("");
@@ -157,6 +159,7 @@ export default function EditProductScreen() {
         setMrp(String(data.mrp ?? data.price ?? ""));
         setStock(String(data.stock || 0));
         setImage(data.image || "");
+        setThumbnailUrl(data.thumbnailUrl || data.image || "");
         setProtext(data.protext || "");
         setCategory(data.category || "");
         setRating(String(data.rating || ""));
@@ -173,21 +176,33 @@ export default function EditProductScreen() {
     }
   };
 
-  const uploadImage = async (uri: string) => {
+  const uploadImage = async (uri: string, mimeType?: string | null) => {
     try {
       setIsUploading(true);
       const response = await fetch(uri);
       const blob = await response.blob();
-      const fileName = `Products/${Date.now()}`;
-      const storageRef = ref(storage, fileName);
-      await uploadBytes(storageRef, blob);
-      const downloadURL = await getDownloadURL(storageRef);
-      setImage(downloadURL);
+      const uriExtension = uri.split("?")[0].split(".").pop()?.toLowerCase();
+      const mimeByExtension: Record<string, string> = {
+        jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp",
+      };
+      const contentType = (mimeType || blob.type || mimeByExtension[uriExtension || ""] || "").split(";")[0].toLowerCase();
+      const extensionByMime: Record<string, string> = {
+        "image/jpeg": "jpg", "image/jpg": "jpg", "image/png": "png", "image/webp": "webp",
+      };
+      const extension = extensionByMime[contentType];
+      if (!extension) throw new Error("Only JPEG, PNG, and WebP images are supported.");
+      const fileName = `Products/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+      await uploadBytes(ref(storage, fileName), blob, { contentType });
+      const functions = getFunctions(undefined, "asia-south1");
+      const optimizeImage = httpsCallable<{ storagePath: string }, { imageUrl: string; thumbnailUrl: string; imageBytes: number; thumbnailBytes: number }>(functions, "optimizeProductImage");
+      const optimized = await optimizeImage({ storagePath: fileName });
+      setImage(optimized.data.imageUrl);
+      setThumbnailUrl(optimized.data.thumbnailUrl);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Success", "Image uploaded successfully");
+      Alert.alert("Success", "Image uploaded and optimized successfully");
     } catch (error) {
-      console.log(error);
-      Alert.alert("Error", "Image upload error");
+      console.log("Image upload error:", error);
+      Alert.alert("Error", error instanceof Error ? error.message : "Image upload error");
     } finally {
       setIsUploading(false);
     }
@@ -208,7 +223,7 @@ export default function EditProductScreen() {
     });
 
     if (!result.canceled) {
-      await uploadImage(result.assets[0].uri);
+      await uploadImage(result.assets[0].uri, result.assets[0].mimeType);
     }
   };
 
@@ -226,7 +241,7 @@ export default function EditProductScreen() {
     });
 
     if (!result.canceled) {
-      await uploadImage(result.assets[0].uri);
+      await uploadImage(result.assets[0].uri, result.assets[0].mimeType);
     }
   };
 
@@ -277,6 +292,10 @@ export default function EditProductScreen() {
   };
 
   const updateProduct = async () => {
+    if (isUploading) {
+      Alert.alert("Image Uploading", "Please wait until image upload and optimization are complete.");
+      return;
+    }
     if (!name || !price || !mrp || !category || Number(mrp) < Number(price) || (productType === "branded" && !brandId)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
@@ -294,6 +313,7 @@ export default function EditProductScreen() {
         price: Number(price),
         stock: Number(stock) || 0,
         image,
+        thumbnailUrl: thumbnailUrl || image,
         protext: protext || "",
         category,
         rating: Number(rating) || 0,
