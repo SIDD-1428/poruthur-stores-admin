@@ -158,7 +158,7 @@ export default function Delivery() {
         {/* Delivery Associates */}
         <TouchableOpacity
           style={styles.card}
-          onPress={() => router.push("/(tabs)/delivery-associates")}
+          onPress={() => router.push("/delivery-associates")}
         >
           <View style={styles.textContainer}>
             <Text style={styles.cardTitle}>Manage Delivery Associates</Text>
