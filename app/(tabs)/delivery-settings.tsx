@@ -155,6 +155,18 @@ export default function Delivery() {
         </TouchableOpacity>
 
 
+        {/* Delivery Associates */}
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => router.push("/(tabs)/delivery-associates")}
+        >
+          <View style={styles.textContainer}>
+            <Text style={styles.cardTitle}>Manage Delivery Associates</Text>
+            <Text style={styles.cardSub}>Add, edit and manage WhatsApp delivery contacts</Text>
+          </View>
+          <Ionicons name="bicycle-outline" size={28} color="#128C7E" />
+        </TouchableOpacity>
+
         {/* Payment QR */}
         <TouchableOpacity
           style={styles.card}
