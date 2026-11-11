@@ -96,7 +96,7 @@ export default function DeliveryAssociatesScreen() {
   const saveAssociate = async () => {
     const cleanName = name.trim();
     const cleanPhone = phone.trim();
-    const digits = cleanPhone.replace(/\\D/g, "");
+    const digits = cleanPhone.replace(/\D/g, "");
 
     if (!cleanName) {
       Alert.alert("Name required", "Enter the delivery associate's name.");
