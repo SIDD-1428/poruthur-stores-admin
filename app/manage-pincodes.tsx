@@ -3,17 +3,17 @@ import { router } from "expo-router";
 import { arrayRemove, arrayUnion, doc, onSnapshot, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
+    Alert,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
-    Alert
+    View
 } from "react-native";
 import { db } from "../firebase/config";
 
 
-export default function managePincodes(){
+export default function ManagePincodes(){
     const[pincode,setPincode]=useState("");
     const[pincodes,setPincodes]=useState<string[]>([]);
     useEffect(()=>{
@@ -88,7 +88,7 @@ export default function managePincodes(){
                                     serviceablePincodes:arrayRemove(pin),
                                 }
                             );
-                            ("Delivery pincode deleted");
+                            Alert.alert("Success","Delivery pincode deleted");
                         }catch(err){
                             console.log(err)
                             alert("Failed to delete pincode");
