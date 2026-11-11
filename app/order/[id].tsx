@@ -1031,7 +1031,7 @@ Team BonMart`;
                       <Ionicons name="bicycle-outline" size={42} color={Colors.muted} />
                       <Text style={{ fontSize: 15, fontWeight: "600", color: Colors.textPrimary, marginTop: 12 }}>No active delivery associates</Text>
                       <Text style={{ fontSize: 12, color: Colors.muted, textAlign: "center", marginTop: 6 }}>Add delivery associates from Settings to share delivery details.</Text>
-                      <TouchableOpacity onPress={() => { setShowAssociateModal(false); router.push("/(tabs)/delivery-associates"); }} style={{ marginTop: 16, padding: 12 }}>
+                      <TouchableOpacity onPress={() => { setShowAssociateModal(false); router.push("/delivery-associates"); }} style={{ marginTop: 16, padding: 12 }}>
                         <Text style={{ color: "#128C7E", fontWeight: "700" }}>Manage delivery associates</Text>
                       </TouchableOpacity>
                     </View>
