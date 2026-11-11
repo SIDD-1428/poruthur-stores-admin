@@ -227,6 +227,7 @@ export default function OrderDetails() {
   const [deliveryAssociates, setDeliveryAssociates] = useState<any[]>([]);
   const [showAssociateModal, setShowAssociateModal] = useState(false);
   const [selectedAssociate, setSelectedAssociate] = useState<any>(null);
+  const [dispatchAfterAssociateSelection, setDispatchAfterAssociateSelection] = useState(false);
   const [showPinModal, setShowPinModal]=useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -348,13 +349,29 @@ export default function OrderDetails() {
       return;
     }
 
+    const dispatchingNow = dispatchAfterAssociateSelection;
     const url = `https://wa.me/${associatePhone}?text=${encodeURIComponent(getDeliveryMessage())}`;
     try {
-      await Linking.openURL(url);
+      await updateDoc(doc(db, "orders", id as string), {
+        ...(dispatchingNow ? { status: "Out For Delivery" } : {}),
+        "delivery.associateId": selectedAssociate.id,
+        "delivery.associateName": selectedAssociate.name,
+        "delivery.associatePhone": selectedAssociate.phone,
+        "delivery.assignedAt": new Date(),
+      });
+
       setShowAssociateModal(false);
       setSelectedAssociate(null);
+      setDispatchAfterAssociateSelection(false);
+
+      if (dispatchingNow) {
+        await navigateToCustomer();
+      }
+
+      await Linking.openURL(url);
     } catch (error) {
-      Alert.alert("Unable to open WhatsApp", "Please check that WhatsApp is installed or try again.");
+      console.error("DELIVERY ASSIGNMENT / WHATSAPP ERROR:", error);
+      Alert.alert("Unable to share delivery details", "The associate assignment may not have been saved. Please check the order and try again.");
     }
   };
 
@@ -401,12 +418,14 @@ export default function OrderDetails() {
         return;
       }
 
-      await updateDoc(doc(db, "orders", id as string), { status });
-
       if (status === "Out For Delivery") {
-        await navigateToCustomer();
+        setDispatchAfterAssociateSelection(true);
+        setSelectedAssociate(null);
+        setShowAssociateModal(true);
+        return;
       }
 
+      await updateDoc(doc(db, "orders", id as string), { status });
       Alert.alert("Updated", `Order marked as ${status}`);
     } catch (e) {
       console.log(e);
@@ -1016,6 +1035,7 @@ Team BonMart`;
         onRequestClose={() => {
           setShowAssociateModal(false);
           setSelectedAssociate(null);
+          setDispatchAfterAssociateSelection(false);
         }}
       >
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }}>
@@ -1073,7 +1093,7 @@ Team BonMart`;
               </>
             )}
             </ScrollView>
-            <TouchableOpacity onPress={() => { setShowAssociateModal(false); setSelectedAssociate(null); }} style={{ alignItems: "center", paddingVertical: 14, marginTop: 4 }}>
+            <TouchableOpacity onPress={() => { setShowAssociateModal(false); setSelectedAssociate(null); setDispatchAfterAssociateSelection(false); }} style={{ alignItems: "center", paddingVertical: 14, marginTop: 4 }}>
               <Text style={{ color: Colors.textSecondary, fontWeight: "600" }}>Close</Text>
             </TouchableOpacity>
           </View>
