@@ -29,7 +29,7 @@ import Animated, {
   FadeInUp,
   ZoomIn,
 } from "react-native-reanimated";
-import { db, storage } from "../firebase/config";
+import { auth, db, storage } from "../firebase/config";
 
 // ── Clean Black/White/Grey Color Scheme ──
 const Colors = {
@@ -144,6 +144,16 @@ console.log(
   const uploadImage = async (uri: string, mimeType?: string | null) => {
     try {
       setIsUploading(true);
+
+      // Ensure the persisted React Native Firebase session is restored
+      // and refresh its ID token before invoking the callable function.
+      await auth.authStateReady();
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error("Your admin session has expired. Please sign in again.");
+      }
+      await currentUser.getIdToken(true);
+
       const response = await fetch(uri);
       const blob = await response.blob();
       const uriExtension = uri.split("?")[0].split(".").pop()?.toLowerCase();
