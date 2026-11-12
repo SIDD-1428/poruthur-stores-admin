@@ -8,7 +8,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { addDoc, collection, getDocs, serverTimestamp } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
-import { ref, uploadBytes } from "firebase/storage";
+import { deleteObject, ref, uploadBytes } from "firebase/storage";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -125,10 +125,7 @@ const data =
   );
 
 setCategories(data); 
-console.log(
-  "Loaded Categories:",
-  data
-); 
+ 
     } catch (error) {
       console.log("Error loading categories:", error);
     }
@@ -142,11 +139,13 @@ console.log(
   };
 
   const uploadImage = async (uri: string, mimeType?: string | null) => {
+    if (isUploading || isSaving) return;
+
+    let sourceRef: ReturnType<typeof ref> | null = null;
+    let sourceUploaded = false;
+
     try {
       setIsUploading(true);
-
-      // Ensure the persisted React Native Firebase session is restored
-      // and refresh its ID token before invoking the callable function.
       await auth.authStateReady();
       const currentUser = auth.currentUser;
       if (!currentUser) {
@@ -155,91 +154,54 @@ console.log(
       await currentUser.getIdToken(true);
 
       const response = await fetch(uri);
+      if (!response.ok) throw new Error("Could not read the selected image.");
       const blob = await response.blob();
+      if (!blob.size || blob.size > 15 * 1024 * 1024) {
+        throw new Error("Please choose an image smaller than 15 MB.");
+      }
+
       const uriExtension = uri.split("?")[0].split(".").pop()?.toLowerCase();
       const mimeByExtension: Record<string, string> = {
         jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp",
       };
-      const contentType = (mimeType || blob.type || mimeByExtension[uriExtension || ""] || "").split(";")[0].toLowerCase();
+      const contentType = (mimeType || blob.type || mimeByExtension[uriExtension || ""] || "")
+        .split(";")[0].toLowerCase();
       const extensionByMime: Record<string, string> = {
         "image/jpeg": "jpg", "image/jpg": "jpg", "image/png": "png", "image/webp": "webp",
       };
       const extension = extensionByMime[contentType];
       if (!extension) throw new Error("Only JPEG, PNG, and WebP images are supported.");
+
       const fileName = `Products/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
-      await uploadBytes(ref(storage, fileName), blob, { contentType });
+      sourceRef = ref(storage, fileName);
+      await uploadBytes(sourceRef, blob, { contentType });
+      sourceUploaded = true;
+
       const functions = getFunctions(auth.app, "asia-south1");
-
-      const authDiagnostics = {
-        authenticated: Boolean(callableUser),
-        uid: callableUser.uid,
-        email: callableUser.email ?? null,
-        authAppName: auth.app.name,
-        authProjectId: auth.app.options.projectId ?? null,
-        functionsAppName: functions.app.name,
-        functionsProjectId: functions.app.options.projectId ?? null,
-        functionsRegion: "asia-south1",
-        tokenPresent: Boolean(tokenResult.token),
-        tokenIssuer: tokenResult.claims.iss ?? null,
-        tokenAudience: tokenResult.claims.aud ?? null,
-        tokenSubject: tokenResult.claims.sub ?? null,
-        tokenSubjectMatchesUid: tokenResult.claims.sub === callableUser.uid,
-        tokenExpirationTime: tokenResult.expirationTime,
-        signInProvider:
-          (tokenResult.claims.firebase as { sign_in_provider?: string } | undefined)
-            ?.sign_in_provider ?? null,
-      };
-
-      console.log("[ImageOptimization] AUTH DIAGNOSTICS", authDiagnostics);
-
       const optimizeImage = httpsCallable<
         { storagePath: string },
         { imageUrl: string; thumbnailUrl: string; imageBytes: number; thumbnailBytes: number }
       >(functions, "optimizeProductImage");
+      const optimized = await optimizeImage({ storagePath: fileName });
 
-      console.log("[ImageOptimization] STEP 3: Invoking optimizeProductImage callable", {
-        storagePath: fileName,
-        authUserPresent: Boolean(callableUser),
-        tokenPresent: Boolean(tokenResult.token),
-      });
-
-      let optimized;
-      try {
-        optimized = await optimizeImage({ storagePath: fileName });
-        console.log("[ImageOptimization] STEP 4: Callable succeeded", {
-          imageBytes: optimized.data.imageBytes,
-          thumbnailBytes: optimized.data.thumbnailBytes,
-          imageUrlReturned: Boolean(optimized.data.imageUrl),
-          thumbnailUrlReturned: Boolean(optimized.data.thumbnailUrl),
-        });
-      } catch (callableError) {
-        const firebaseError = callableError as {
-          code?: string;
-          message?: string;
-          details?: unknown;
-          customData?: unknown;
-        };
-
-        console.error("[ImageOptimization] CALLABLE FAILED", {
-          code: firebaseError.code ?? null,
-          message: firebaseError.message ?? String(callableError),
-          details: firebaseError.details ?? null,
-          customData: firebaseError.customData ?? null,
-          authUid: callableUser.uid,
-          tokenPresent: Boolean(tokenResult.token),
-          authProjectId: auth.app.options.projectId ?? null,
-          functionsProjectId: functions.app.options.projectId ?? null,
-          functionsRegion: "asia-south1",
-        });
-        throw callableError;
+      if (!optimized.data.imageUrl || !optimized.data.thumbnailUrl) {
+        throw new Error("Image optimization did not return both image URLs. Please retry.");
       }
+
       setImage(optimized.data.imageUrl);
       setThumbnailUrl(optimized.data.thumbnailUrl);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", "Image uploaded and optimized successfully");
     } catch (error) {
-      console.log("Image upload error:", error);
-      Alert.alert("Error", error instanceof Error ? error.message : "Image upload error");
+      if (sourceUploaded && sourceRef) {
+        try {
+          await deleteObject(sourceRef);
+        } catch (cleanupError) {
+          console.warn("Could not clean up failed product image upload.", cleanupError);
+        }
+      }
+      console.error("Product image upload failed:", error);
+      Alert.alert("Image upload failed", error instanceof Error ? error.message : "Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -283,47 +245,62 @@ console.log(
   };
 
   const saveProduct = async () => {
+    if (isSaving) return;
     if (isUploading) {
       Alert.alert("Image Uploading", "Please wait until image upload and optimization are complete.");
       return;
     }
-    if (!name || !price || !mrp || !image || !category || Number(mrp) < Number(price) || (productType === "branded" && !brandId)) {
+
+    const cleanName = name.trim();
+    const numericPrice = Number(price);
+    const numericMrp = Number(mrp);
+    const numericStock = stock.trim() === "" ? 0 : Number(stock);
+    const numericMaxOrderQty = maxOrderQty.trim() === "" ? 0 : Number(maxOrderQty);
+    const numericRating = rating.trim() === "" ? 0 : Number(rating);
+    const validNumbers =
+      Number.isFinite(numericPrice) && numericPrice > 0 &&
+      Number.isFinite(numericMrp) && numericMrp > 0 && numericMrp >= numericPrice &&
+      Number.isInteger(numericStock) && numericStock >= 0 &&
+      Number.isInteger(numericMaxOrderQty) && numericMaxOrderQty >= 0 &&
+      Number.isFinite(numericRating) && numericRating >= 0 && numericRating <= 5;
+    const validBrand = productType !== "branded" ||
+      (Boolean(brandId) && brands.some((brand: any) => brand.id === brandId));
+
+    if (!cleanName || !category.trim() || !image.trim() || !validNumbers || !validBrand) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
-        "Missing Information",
-        `Please fill all required fields:\n• Product Name\n• MRP (must be ≥ Selling Price)\n• Selling Price\n• Image\n• Category${productType === "branded" ? "\n• Brand" : ""}`
+        "Check Product Details",
+        "Enter a product name and category, upload an image, use valid positive prices (MRP must be at least the selling price), enter whole-number stock and order quantities of 0 or more, set a rating from 0 to 5, and select a valid brand for branded products."
       );
       return;
     }
 
     setIsSaving(true);
-    try{
+    try {
       await addDoc(collection(db, "products"), {
-        name,
-        mrp: Number(mrp),
-        price: Number(price),
-        image,
-        thumbnailUrl: thumbnailUrl || image,
-        protext: protext || "",
-        category,
-        rating: Number(rating) || 0,
-        unit: unit || "",
-        stock: Number(stock) || 0,
-        maxOrderQty: Number(maxOrderQty) || 0,
+        name: cleanName,
+        mrp: numericMrp,
+        price: numericPrice,
+        image: image.trim(),
+        thumbnailUrl: thumbnailUrl.trim() || image.trim(),
+        protext: protext.trim(),
+        category: category.trim(),
+        rating: numericRating,
+        unit: unit.trim(),
+        stock: numericStock,
+        maxOrderQty: numericMaxOrderQty,
         brandId: productType === "branded" ? brandId : null,
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
       });
-
-      await loadCategories();
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", "Product added successfully", [
         { text: "OK", onPress: () => router.back() }
       ]);
     } catch (error) {
-      console.log(error);
+      console.error("Failed to add product:", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Error", "Failed to add product");
+      Alert.alert("Error", "Failed to add product. Please check your connection and try again.");
     } finally {
       setIsSaving(false);
     }
@@ -423,7 +400,7 @@ console.log(
               <Image source={{ uri: image }} style={styles.imagePreview} />
               <TouchableOpacity
                 style={styles.removeImageBtn}
-                onPress={() => setImage("")}
+                onPress={() => { setImage(""); setThumbnailUrl(""); }}
               >
                 <Ionicons name="close-circle" size={24} color={Colors.danger} />
               </TouchableOpacity>
@@ -439,7 +416,7 @@ console.log(
             <TouchableOpacity
               style={styles.galleryBtn}
               onPress={pickFromGallery}
-              disabled={isUploading}
+              disabled={isUploading || isSaving}
             >
               <LinearGradient
                 colors={["#FFFFFF", "#F5F5F5"]}
@@ -846,7 +823,7 @@ console.log(
                   <TextInput
                     style={styles.imageUrlModalInput}
                     value={image}
-                    onChangeText={(value) => { setImage(value); setImageUrlCopied(false); }}
+                    onChangeText={(value) => { setImage(value); setThumbnailUrl(value); setImageUrlCopied(false); }}
                     placeholder="Paste image URL here"
                     placeholderTextColor={Colors.muted}
                     autoCapitalize="none"

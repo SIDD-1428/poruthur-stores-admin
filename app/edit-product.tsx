@@ -17,7 +17,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
-import { ref, uploadBytes } from "firebase/storage";
+import { deleteObject, ref, uploadBytes } from "firebase/storage";
 import React, {
   useEffect,
   useState,
@@ -136,7 +136,7 @@ export default function EditProductScreen() {
       const snapshot = await getDocs(collection(db, "categories"));
       const data = snapshot.docs.map((doc) => doc.data().name);
       setCategories(data);
-      console.log("Loaded Categories:", data);
+      
     } catch (error) {
       console.log("Error loading categories:", error);
     }
@@ -151,7 +151,11 @@ export default function EditProductScreen() {
 
   const loadProduct = async () => {
     try {
-      const snap = await getDoc(doc(db, "products", id as string));
+      if (typeof id !== "string" || !id.trim()) {
+        Alert.alert("Error", "The product ID is missing or invalid. Please reopen this product.");
+        return;
+      }
+      const snap = await getDoc(doc(db, "products", id));
       if (snap.exists()) {
         const data = snap.data();
         setName(data.name || "");
@@ -177,11 +181,13 @@ export default function EditProductScreen() {
   };
 
   const uploadImage = async (uri: string, mimeType?: string | null) => {
+    if (isUploading || isSaving) return;
+
+    let sourceRef: ReturnType<typeof ref> | null = null;
+    let sourceUploaded = false;
+
     try {
       setIsUploading(true);
-
-      // Ensure the persisted React Native Firebase session is restored
-      // and refresh its ID token before invoking the callable function.
       await auth.authStateReady();
       const currentUser = auth.currentUser;
       if (!currentUser) {
@@ -190,29 +196,54 @@ export default function EditProductScreen() {
       await currentUser.getIdToken(true);
 
       const response = await fetch(uri);
+      if (!response.ok) throw new Error("Could not read the selected image.");
       const blob = await response.blob();
+      if (!blob.size || blob.size > 15 * 1024 * 1024) {
+        throw new Error("Please choose an image smaller than 15 MB.");
+      }
+
       const uriExtension = uri.split("?")[0].split(".").pop()?.toLowerCase();
       const mimeByExtension: Record<string, string> = {
         jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp",
       };
-      const contentType = (mimeType || blob.type || mimeByExtension[uriExtension || ""] || "").split(";")[0].toLowerCase();
+      const contentType = (mimeType || blob.type || mimeByExtension[uriExtension || ""] || "")
+        .split(";")[0].toLowerCase();
       const extensionByMime: Record<string, string> = {
         "image/jpeg": "jpg", "image/jpg": "jpg", "image/png": "png", "image/webp": "webp",
       };
       const extension = extensionByMime[contentType];
       if (!extension) throw new Error("Only JPEG, PNG, and WebP images are supported.");
+
       const fileName = `Products/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
-      await uploadBytes(ref(storage, fileName), blob, { contentType });
+      sourceRef = ref(storage, fileName);
+      await uploadBytes(sourceRef, blob, { contentType });
+      sourceUploaded = true;
+
       const functions = getFunctions(auth.app, "asia-south1");
-      const optimizeImage = httpsCallable<{ storagePath: string }, { imageUrl: string; thumbnailUrl: string; imageBytes: number; thumbnailBytes: number }>(functions, "optimizeProductImage");
+      const optimizeImage = httpsCallable<
+        { storagePath: string },
+        { imageUrl: string; thumbnailUrl: string; imageBytes: number; thumbnailBytes: number }
+      >(functions, "optimizeProductImage");
       const optimized = await optimizeImage({ storagePath: fileName });
+
+      if (!optimized.data.imageUrl || !optimized.data.thumbnailUrl) {
+        throw new Error("Image optimization did not return both image URLs. Please retry.");
+      }
+
       setImage(optimized.data.imageUrl);
       setThumbnailUrl(optimized.data.thumbnailUrl);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", "Image uploaded and optimized successfully");
     } catch (error) {
-      console.log("Image upload error:", error);
-      Alert.alert("Error", error instanceof Error ? error.message : "Image upload error");
+      if (sourceUploaded && sourceRef) {
+        try {
+          await deleteObject(sourceRef);
+        } catch (cleanupError) {
+          console.warn("Could not clean up failed product image upload.", cleanupError);
+        }
+      }
+      console.error("Product image upload failed:", error);
+      Alert.alert("Image upload failed", error instanceof Error ? error.message : "Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -262,19 +293,23 @@ export default function EditProductScreen() {
     }
 
     // Check if category already exists
-    if (categories.includes(newCategory.trim())) {
+    if (categories.some((item) => item.trim().toLowerCase() === newCategory.trim().toLowerCase())) {
       Alert.alert("Error", "Category already exists");
       return;
     }
 
     setIsAddingCategory(true);
     try {
-      const docRef = await addDoc(collection(db, "categories"), {
+      const existingCategories = await getDocs(collection(db, "categories"));
+      const maxPosition = Math.max(0, ...existingCategories.docs.map((item) => item.data().position ?? 0));
+      await addDoc(collection(db, "categories"), {
         name: newCategory.trim(),
+        subtitle: "",
+        image: "",
+        position: maxPosition + 1,
+        isVisible: true,
         createdAt: serverTimestamp(),
       });
-
-      console.log("Category added with ID:", docRef.id);
       
       // Update local state
       setCategories((prev) => [...prev, newCategory.trim()]);
@@ -286,7 +321,7 @@ export default function EditProductScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", `Category "${newCategory.trim()}" added successfully`);
     } catch (error: any) {
-      console.log("Error adding category:", error);
+      console.error("Error adding category:", error);
       
       let errorMessage = "Failed to add category";
       if (error.code === "permission-denied") {
@@ -302,36 +337,58 @@ export default function EditProductScreen() {
   };
 
   const updateProduct = async () => {
+    if (isSaving) return;
     if (isUploading) {
       Alert.alert("Image Uploading", "Please wait until image upload and optimization are complete.");
       return;
     }
-    if (!name || !price || !mrp || !category || Number(mrp) < Number(price) || (productType === "branded" && !brandId)) {
+    if (typeof id !== "string" || !id.trim()) {
+      Alert.alert("Error", "The product ID is missing or invalid. Please reopen this product.");
+      return;
+    }
+
+    const cleanName = name.trim();
+    const numericPrice = Number(price);
+    const numericMrp = Number(mrp);
+    const numericStock = stock.trim() === "" ? 0 : Number(stock);
+    const numericMaxOrderQty = maxOrderQty.trim() === "" ? 0 : Number(maxOrderQty);
+    const numericRating = rating.trim() === "" ? 0 : Number(rating);
+    const validNumbers =
+      Number.isFinite(numericPrice) && numericPrice > 0 &&
+      Number.isFinite(numericMrp) && numericMrp > 0 && numericMrp >= numericPrice &&
+      Number.isInteger(numericStock) && numericStock >= 0 &&
+      Number.isInteger(numericMaxOrderQty) && numericMaxOrderQty >= 0 &&
+      Number.isFinite(numericRating) && numericRating >= 0 && numericRating <= 5;
+    const validBrand = productType !== "branded" ||
+      (Boolean(brandId) && brands.some((brand: any) => brand.id === brandId));
+
+    if (!cleanName || !category.trim() || !validNumbers || !validBrand) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
-        "Missing Information",
-        `Please fill all required fields:\n• Product Name\n• MRP (must be ≥ Selling Price)\n• Selling Price\n• Category${productType === "branded" ? "\n• Brand" : ""}`
+        "Check Product Details",
+        "Enter a product name and category, use valid positive prices (MRP must be at least the selling price), enter whole-number stock and order quantities of 0 or more, set a rating from 0 to 5, and select a valid brand for branded products."
       );
       return;
     }
 
     setIsSaving(true);
     try {
-      await updateDoc(doc(db, "products", id as string), {
-        name,
-        mrp: Number(mrp),
-        price: Number(price),
-        stock: Number(stock) || 0,
-        image,
-        thumbnailUrl: thumbnailUrl || image,
-        protext: protext || "",
-        category,
-        rating: Number(rating) || 0,
-        unit: unit || "",
-        maxOrderQty: Number(maxOrderQty) || 0,
+      const cleanImage = image.trim();
+      await updateDoc(doc(db, "products", id), {
+        name: cleanName,
+        mrp: numericMrp,
+        price: numericPrice,
+        stock: numericStock,
+        image: cleanImage,
+        thumbnailUrl: cleanImage ? (thumbnailUrl.trim() || cleanImage) : "",
+        protext: protext.trim(),
+        category: category.trim(),
+        rating: numericRating,
+        unit: unit.trim(),
+        maxOrderQty: numericMaxOrderQty,
         productType: deleteField(),
         brandId: productType === "branded" ? brandId : null,
-        updatedAt: new Date(),
+        updatedAt: serverTimestamp(),
       });
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -339,9 +396,9 @@ export default function EditProductScreen() {
         { text: "OK", onPress: () => router.back() }
       ]);
     } catch (error) {
-      console.log(error);
+      console.error("Failed to update product:", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("Error", "Failed to update product");
+      Alert.alert("Error", "Failed to update product. Please check your connection and try again.");
     } finally {
       setIsSaving(false);
     }
@@ -396,7 +453,7 @@ export default function EditProductScreen() {
               <Image source={{ uri: image }} style={styles.imagePreview} />
               <TouchableOpacity
                 style={styles.removeImageBtn}
-                onPress={() => setImage("")}
+                onPress={() => { setImage(""); setThumbnailUrl(""); }}
               >
                 <Ionicons name="close-circle" size={24} color={Colors.danger} />
               </TouchableOpacity>
@@ -412,7 +469,7 @@ export default function EditProductScreen() {
             <TouchableOpacity
               style={styles.galleryBtn}
               onPress={pickFromGallery}
-              disabled={isUploading}
+              disabled={isUploading || isSaving}
             >
               <LinearGradient
                 colors={["#FFFFFF", "#F5F5F5"]}
@@ -820,7 +877,7 @@ export default function EditProductScreen() {
                   <TextInput
                     style={styles.imageUrlModalInput}
                     value={image}
-                    onChangeText={(value) => { setImage(value); setImageUrlCopied(false); }}
+                    onChangeText={(value) => { setImage(value); setThumbnailUrl(value); setImageUrlCopied(false); }}
                     placeholder="Paste image URL here"
                     placeholderTextColor={Colors.muted}
                     autoCapitalize="none"
