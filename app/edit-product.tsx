@@ -203,7 +203,7 @@ export default function EditProductScreen() {
       if (!extension) throw new Error("Only JPEG, PNG, and WebP images are supported.");
       const fileName = `Products/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
       await uploadBytes(ref(storage, fileName), blob, { contentType });
-      const functions = getFunctions(undefined, "asia-south1");
+      const functions = getFunctions(auth.app, "asia-south1");
       const optimizeImage = httpsCallable<{ storagePath: string }, { imageUrl: string; thumbnailUrl: string; imageBytes: number; thumbnailBytes: number }>(functions, "optimizeProductImage");
       const optimized = await optimizeImage({ storagePath: fileName });
       setImage(optimized.data.imageUrl);
