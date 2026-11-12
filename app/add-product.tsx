@@ -167,23 +167,7 @@ console.log(
       const extension = extensionByMime[contentType];
       if (!extension) throw new Error("Only JPEG, PNG, and WebP images are supported.");
       const fileName = `Products/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
-      console.log("[ImageOptimization] STEP 1: Uploading original image", {
-        storagePath: fileName,
-        contentType,
-        imageSizeBytes: blob.size,
-      });
       await uploadBytes(ref(storage, fileName), blob, { contentType });
-      console.log("[ImageOptimization] STEP 2: Storage upload successful");
-
-      // Refresh and inspect the Auth session immediately before the callable request.
-      // Never log the raw ID token; only safe token claims and app metadata are recorded.
-      await auth.authStateReady();
-      const callableUser = auth.currentUser;
-      if (!callableUser) {
-        throw new Error("No authenticated Firebase user is available before image optimization.");
-      }
-
-      const tokenResult = await callableUser.getIdTokenResult(true);
       const functions = getFunctions(auth.app, "asia-south1");
 
       const authDiagnostics = {

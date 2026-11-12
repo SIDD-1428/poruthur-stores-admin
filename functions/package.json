@@ -28,5 +28,8 @@
     "firebase-functions-test": "^3.4.1",
     "typescript": "^6.0.0"
   },
-  "private": true
+  "private": true,
+  "allowScripts": {
+    "sharp@0.34.5": true
+  }
 }
