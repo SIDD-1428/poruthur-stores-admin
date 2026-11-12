@@ -2,6 +2,7 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
+import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
@@ -892,7 +893,7 @@ export default function EditProductScreen() {
                     disabled={!image.trim()}
                     onPress={async () => {
                       try {
-                        await setStringAsync(image.trim());
+                        await Clipboard.setStringAsync(image.trim());
                         setImageUrlCopied(true);
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                       } catch {

@@ -1,7 +1,7 @@
 'use client';
-
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
+import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
@@ -147,11 +147,14 @@ setCategories(data);
     try {
       setIsUploading(true);
       await auth.authStateReady();
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        throw new Error("Your admin session has expired. Please sign in again.");
-      }
-      await currentUser.getIdToken(true);
+
+const callableUser = auth.currentUser;
+
+if (!callableUser) {
+  throw new Error("Your admin session has expired. Please sign in again.");
+}
+
+const tokenResult = await callableUser.getIdTokenResult(true);
 
       const response = await fetch(uri);
       if (!response.ok) throw new Error("Could not read the selected image.");
@@ -838,7 +841,7 @@ setCategories(data);
                     disabled={!image.trim()}
                     onPress={async () => {
                       try {
-                        await setStringAsync(image.trim());
+                        await Clipboard.setStringAsync(image.trim());
                         setImageUrlCopied(true);
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                       } catch {
