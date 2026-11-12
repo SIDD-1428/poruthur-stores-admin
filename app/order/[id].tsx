@@ -14,6 +14,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  ImageStyle,
   TextStyle,
   TouchableOpacity,
   View,
@@ -1293,7 +1294,7 @@ type MainStyles = {
   addressMuted: TextStyle;
   phoneRow: ViewStyle;
   itemRow: ViewStyle;
-  itemImage: ViewStyle;
+  itemImage: ImageStyle;
   itemImagePlaceholder: ViewStyle;
   itemLeft: ViewStyle;
   itemName: TextStyle;
