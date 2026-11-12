@@ -167,10 +167,88 @@ console.log(
       const extension = extensionByMime[contentType];
       if (!extension) throw new Error("Only JPEG, PNG, and WebP images are supported.");
       const fileName = `Products/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+      console.log("[ImageOptimization] STEP 1: Uploading original image", {
+        storagePath: fileName,
+        contentType,
+        imageSizeBytes: blob.size,
+      });
       await uploadBytes(ref(storage, fileName), blob, { contentType });
+      console.log("[ImageOptimization] STEP 2: Storage upload successful");
+
+      // Refresh and inspect the Auth session immediately before the callable request.
+      // Never log the raw ID token; only safe token claims and app metadata are recorded.
+      await auth.authStateReady();
+      const callableUser = auth.currentUser;
+      if (!callableUser) {
+        throw new Error("No authenticated Firebase user is available before image optimization.");
+      }
+
+      const tokenResult = await callableUser.getIdTokenResult(true);
       const functions = getFunctions(auth.app, "asia-south1");
-      const optimizeImage = httpsCallable<{ storagePath: string }, { imageUrl: string; thumbnailUrl: string; imageBytes: number; thumbnailBytes: number }>(functions, "optimizeProductImage");
-      const optimized = await optimizeImage({ storagePath: fileName });
+
+      const authDiagnostics = {
+        authenticated: Boolean(callableUser),
+        uid: callableUser.uid,
+        email: callableUser.email ?? null,
+        authAppName: auth.app.name,
+        authProjectId: auth.app.options.projectId ?? null,
+        functionsAppName: functions.app.name,
+        functionsProjectId: functions.app.options.projectId ?? null,
+        functionsRegion: "asia-south1",
+        tokenPresent: Boolean(tokenResult.token),
+        tokenIssuer: tokenResult.claims.iss ?? null,
+        tokenAudience: tokenResult.claims.aud ?? null,
+        tokenSubject: tokenResult.claims.sub ?? null,
+        tokenSubjectMatchesUid: tokenResult.claims.sub === callableUser.uid,
+        tokenExpirationTime: tokenResult.expirationTime,
+        signInProvider:
+          (tokenResult.claims.firebase as { sign_in_provider?: string } | undefined)
+            ?.sign_in_provider ?? null,
+      };
+
+      console.log("[ImageOptimization] AUTH DIAGNOSTICS", authDiagnostics);
+
+      const optimizeImage = httpsCallable<
+        { storagePath: string },
+        { imageUrl: string; thumbnailUrl: string; imageBytes: number; thumbnailBytes: number }
+      >(functions, "optimizeProductImage");
+
+      console.log("[ImageOptimization] STEP 3: Invoking optimizeProductImage callable", {
+        storagePath: fileName,
+        authUserPresent: Boolean(callableUser),
+        tokenPresent: Boolean(tokenResult.token),
+      });
+
+      let optimized;
+      try {
+        optimized = await optimizeImage({ storagePath: fileName });
+        console.log("[ImageOptimization] STEP 4: Callable succeeded", {
+          imageBytes: optimized.data.imageBytes,
+          thumbnailBytes: optimized.data.thumbnailBytes,
+          imageUrlReturned: Boolean(optimized.data.imageUrl),
+          thumbnailUrlReturned: Boolean(optimized.data.thumbnailUrl),
+        });
+      } catch (callableError) {
+        const firebaseError = callableError as {
+          code?: string;
+          message?: string;
+          details?: unknown;
+          customData?: unknown;
+        };
+
+        console.error("[ImageOptimization] CALLABLE FAILED", {
+          code: firebaseError.code ?? null,
+          message: firebaseError.message ?? String(callableError),
+          details: firebaseError.details ?? null,
+          customData: firebaseError.customData ?? null,
+          authUid: callableUser.uid,
+          tokenPresent: Boolean(tokenResult.token),
+          authProjectId: auth.app.options.projectId ?? null,
+          functionsProjectId: functions.app.options.projectId ?? null,
+          functionsRegion: "asia-south1",
+        });
+        throw callableError;
+      }
       setImage(optimized.data.imageUrl);
       setThumbnailUrl(optimized.data.thumbnailUrl);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
