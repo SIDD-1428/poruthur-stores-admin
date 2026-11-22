@@ -97,7 +97,6 @@ export default function AddProductScreen() {
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [thumbnailUrl, setThumbnailUrl] = useState("");
 
   useEffect(() => {
     loadCategories();
@@ -180,7 +179,8 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
 
     const optimized = await optimizeImage({ storagePath: fileName });
 
-return { imageUrl: optimized.data.imageUrl, thumbnailUrl: optimized.data.thumbnailUrl };
+setImage(optimized.data.imageUrl);
+    return { imageUrl: optimized.data.imageUrl, thumbnailUrl: optimized.data.thumbnailUrl };
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert("Success", "Image uploaded and optimized successfully");
@@ -625,7 +625,7 @@ return { imageUrl: optimized.data.imageUrl, thumbnailUrl: optimized.data.thumbna
             value={image}
             onChangeText={(value : string) => {
               setImage(value);
-              setThumbnailUrl("");
+              setImages(value.trim() ? [{ imageUrl: value.trim(), thumbnailUrl: value.trim() }] : []);
             }}          />
         </Animated.View>
 
