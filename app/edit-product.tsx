@@ -103,6 +103,7 @@ export default function EditProductScreen() {
   const [mrp, setMrp] = useState("");
   const [image, setImage] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [images, setImages] = useState<Array<{ image: string; thumbnailUrl: string }>>([]);
   const [imageUrlModalVisible, setImageUrlModalVisible] = useState(false);
   const [imageUrlCopied, setImageUrlCopied] = useState(false);
   const [protext, setProtext] = useState("");
@@ -163,8 +164,16 @@ export default function EditProductScreen() {
         setPrice(String(data.price ?? ""));
         setMrp(String(data.mrp ?? data.price ?? ""));
         setStock(String(data.stock || 0));
-        setImage(data.image || "");
-        setThumbnailUrl(data.thumbnailUrl || data.image || "");
+        const savedImages = Array.isArray(data.images)
+          ? data.images.filter((item: any) => item && typeof item.image === "string" && item.image.trim()).slice(0, 5)
+              .map((item: any) => ({ image: item.image, thumbnailUrl: item.thumbnailUrl || item.image }))
+          : [];
+        const initialImages = savedImages.length
+          ? savedImages
+          : data.image ? [{ image: data.image, thumbnailUrl: data.thumbnailUrl || data.image }] : [];
+        setImages(initialImages);
+        setImage(initialImages[0]?.image || "");
+        setThumbnailUrl(initialImages[0]?.thumbnailUrl || "");
         setProtext(data.protext || "");
         setCategory(data.category || "");
         setRating(String(data.rating || ""));
@@ -231,8 +240,12 @@ export default function EditProductScreen() {
         throw new Error("Image optimization did not return both image URLs. Please retry.");
       }
 
-      setImage(optimized.data.imageUrl);
-      setThumbnailUrl(optimized.data.thumbnailUrl);
+      const uploadedImage = { image: optimized.data.imageUrl, thumbnailUrl: optimized.data.thumbnailUrl };
+      setImages((current) => {
+        const next = [...current, uploadedImage];
+        if (next.length === 1) { setImage(uploadedImage.image); setThumbnailUrl(uploadedImage.thumbnailUrl); }
+        return next;
+      });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", "Image uploaded and optimized successfully");
     } catch (error) {
@@ -257,15 +270,17 @@ export default function EditProductScreen() {
       return;
     }
 
+    const remaining = 5 - images.length;
+    if (remaining <= 0) { Alert.alert("Image limit reached", "A product can have up to 5 images."); return; }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
-      allowsEditing: true,
-      aspect: [4, 3],
+      allowsEditing: false,
+      allowsMultipleSelection: true,
+      selectionLimit: remaining,
     });
-
     if (!result.canceled) {
-      await uploadImage(result.assets[0].uri, result.assets[0].mimeType);
+      for (const asset of result.assets.slice(0, remaining)) await uploadImage(asset.uri, asset.mimeType);
     }
   };
 
@@ -363,7 +378,7 @@ export default function EditProductScreen() {
     const validBrand = productType !== "branded" ||
       (Boolean(brandId) && brands.some((brand: any) => brand.id === brandId));
 
-    if (!cleanName || !category.trim() || !validNumbers || !validBrand) {
+    if (!cleanName || !category.trim() || (!images.length && !image.trim()) || !validNumbers || !validBrand) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         "Check Product Details",
@@ -380,8 +395,9 @@ export default function EditProductScreen() {
         mrp: numericMrp,
         price: numericPrice,
         stock: numericStock,
-        image: cleanImage,
-        thumbnailUrl: cleanImage ? (thumbnailUrl.trim() || cleanImage) : "",
+        image: images[0]?.image || cleanImage,
+        thumbnailUrl: images[0]?.thumbnailUrl || (cleanImage ? (thumbnailUrl.trim() || cleanImage) : ""),
+        images: images.length ? images : cleanImage ? [{ image: cleanImage, thumbnailUrl: thumbnailUrl.trim() || cleanImage }] : [],
         protext: protext.trim(),
         category: category.trim(),
         rating: numericRating,
