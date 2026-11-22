@@ -83,6 +83,7 @@ export default function AddProductScreen() {
   const [price, setPrice] = useState("");
   const [mrp, setMrp] = useState("");
   const [image, setImage] = useState("");
+  const [images, setImages] = useState<Array<{imageUrl:string;thumbnailUrl:string}>>([]);
   const [protext, setProtext] = useState("");
   const [rating, setRating] = useState("");
   const [unit, setUnit] = useState("");
@@ -179,8 +180,7 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
 
     const optimized = await optimizeImage({ storagePath: fileName });
 
-setImage(optimized.data.imageUrl);
-setThumbnailUrl(optimized.data.thumbnailUrl);
+return { imageUrl: optimized.data.imageUrl, thumbnailUrl: optimized.data.thumbnailUrl };
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert("Success", "Image uploaded and optimized successfully");
@@ -205,15 +205,18 @@ setThumbnailUrl(optimized.data.thumbnailUrl);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
-      allowsEditing: true,
-      aspect: [4, 3],
+      allowsMultipleSelection: true,
+      selectionLimit: 5,
     });
 
     if (!result.canceled) {
-await uploadImage(
-  result.assets[0].uri,
-  result.assets[0].mimeType
-);    }
+      const remaining = Math.max(0, 5 - images.length);
+      if (result.assets.length > remaining) Alert.alert("Image limit", "A product can have up to 5 images.");
+      for (const asset of result.assets.slice(0, remaining)) {
+        const uploaded = await uploadImage(asset.uri, asset.mimeType);
+        if (uploaded) setImages((current) => [...current, uploaded]);
+      }
+    }
   };
 
   const takePhoto = async () => {
@@ -241,7 +244,7 @@ await uploadImage(
           Alert.alert("Image Uploading", "Please wait until the image upload and optimization are complete");
           return;
         }
-    if (!name || !price || !mrp || !image || !category || Number(mrp) < Number(price)) {
+    if (!name || !price || !mrp || images.length === 0 || !category || Number(mrp) < Number(price)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         "Missing Information",
@@ -256,7 +259,8 @@ await uploadImage(
         name,
         mrp: Number(mrp),
         price: Number(price),
-        image,
+        image: images[0]?.imageUrl || "",
+        images,
         protext: protext || "",
         category,
         rating: Number(rating) || 0,
@@ -264,7 +268,7 @@ await uploadImage(
         stock: Number(stock) || 0,
         maxOrderQty: Number(maxOrderQty) || 0,
         createdAt: new Date(),
-        thumbnailUrl: thumbnailUrl || image,
+        thumbnailUrl: images[0]?.thumbnailUrl || images[0]?.imageUrl || "",
       });
 
       await loadCategories();
@@ -370,23 +374,22 @@ await uploadImage(
           <Text style={styles.sectionTitle}>Product Image</Text>
           <Text style={styles.sectionSubtitle}>Upload a photo of your product</Text>
           
-          {image ? (
-            <View style={styles.imagePreviewContainer}>
-              <Image source={{ uri: image }} style={styles.imagePreview} />
-              <TouchableOpacity
-                style={styles.removeImageBtn}
-                onPress={() =>{ setImage("");
-                setThumbnailUrl("");
-                } 
-                }
-              >
-                <Ionicons name="close-circle" size={24} color={Colors.danger} />
-              </TouchableOpacity>
+          {images.length ? (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+              {images.map((item, index) => (
+                <View key={item.imageUrl} style={styles.imagePreviewContainer}>
+                  <Image source={{ uri: item.thumbnailUrl || item.imageUrl }} style={styles.imagePreview} />
+                  <Text style={{ color: Colors.textSecondary, fontSize: 11 }}>Photo {index + 1}{index === 0 ? " · Primary" : ""}</Text>
+                  <TouchableOpacity style={styles.removeImageBtn} onPress={() => setImages((current) => current.filter((_, i) => i !== index))}>
+                    <Ionicons name="close-circle" size={24} color={Colors.danger} />
+                  </TouchableOpacity>
+                </View>
+              ))}
             </View>
           ) : (
             <View style={styles.imagePlaceholder}>
               <Ionicons name="image-outline" size={48} color={Colors.muted} />
-              <Text style={styles.imagePlaceholderText}>No image selected</Text>
+              <Text style={styles.imagePlaceholderText}>No images selected</Text>
             </View>
           )}
 
