@@ -214,10 +214,8 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
 
     const optimized = await optimizeImage({ storagePath: fileName });
 
-    return { imageUrl: optimized.data.imageUrl, thumbnailUrl: optimized.data.thumbnailUrl };
-
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert("Success", "Image uploaded and optimized successfully");
+    return { imageUrl: optimized.data.imageUrl, thumbnailUrl: optimized.data.thumbnailUrl };
   } catch (error) {
     console.log("Image upload error:", error);
     Alert.alert(
