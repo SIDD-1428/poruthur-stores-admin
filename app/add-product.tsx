@@ -232,11 +232,13 @@ return { imageUrl: optimized.data.imageUrl, thumbnailUrl: optimized.data.thumbna
       aspect: [4, 3],
     });
     if (!result.canceled) {
-  await uploadImage(
-    result.assets[0].uri,
-    result.assets[0].mimeType
-  );
-}
+      if (images.length >= 5) {
+        Alert.alert("Image limit", "A product can have up to 5 images.");
+        return;
+      }
+      const uploaded = await uploadImage(result.assets[0].uri, result.assets[0].mimeType);
+      if (uploaded) setImages((current) => [...current, uploaded]);
+    }
   };
 
   const saveProduct = async () => {
