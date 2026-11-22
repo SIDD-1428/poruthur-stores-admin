@@ -401,62 +401,54 @@ const tokenResult = await callableUser.getIdTokenResult(true);
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Product Image Section */}
+        {/* Product Image Gallery */}
         <Animated.View entering={ZoomIn.delay(100)} style={styles.imageSection}>
-          <Text style={styles.sectionTitle}>Product Image</Text>
-          <Text style={styles.sectionSubtitle}>Add the photo customers will see. Choose an image from your gallery or take a new photo.</Text>
-          
-          {image ? (
-            <View style={styles.imagePreviewContainer}>
-              <Image source={{ uri: image }} style={styles.imagePreview} />
-              <TouchableOpacity
-                style={styles.removeImageBtn}
-                onPress={() => { setImage(""); setThumbnailUrl(""); }}
-              >
-                <Ionicons name="close-circle" size={24} color={Colors.danger} />
-              </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Product Images ({images.length}/5)</Text>
+          <Text style={styles.sectionSubtitle}>Add up to five photos. The first image is the primary customer-facing image.</Text>
+          {images.length ? (
+            <View style={styles.galleryGrid}>
+              {images.map((item, index) => (
+                <View key={item.image + index} style={styles.galleryImageItem}>
+                  <Image source={{ uri: item.image }} style={styles.galleryImagePreview} />
+                  {index === 0 && <View style={styles.primaryImageBadge}><Text style={styles.primaryImageBadgeText}>Primary</Text></View>}
+                  <TouchableOpacity style={styles.galleryRemoveButton} disabled={isUploading || isSaving}
+                    onPress={() => setImages((current) => {
+                      const next = current.filter((_, i) => i !== index);
+                      setImage(next[0]?.image || "");
+                      setThumbnailUrl(next[0]?.thumbnailUrl || "");
+                      return next;
+                    })}>
+                    <Ionicons name="close-circle" size={23} color={Colors.danger} />
+                  </TouchableOpacity>
+                </View>
+              ))}
             </View>
           ) : (
             <View style={styles.imagePlaceholder}>
-              <Ionicons name="image-outline" size={48} color={Colors.muted} />
-              <Text style={styles.imagePlaceholderText}>No image selected</Text>
+              <Ionicons name="images-outline" size={48} color={Colors.muted} />
+              <Text style={styles.imagePlaceholderText}>No images selected</Text>
             </View>
           )}
-
           <View style={styles.imageButtons}>
-            <TouchableOpacity
-              style={styles.galleryBtn}
-              onPress={pickFromGallery}
-              disabled={isUploading || isSaving}
-            >
-              <LinearGradient
-                colors={["#FFFFFF", "#F5F5F5"]}
-                style={styles.galleryBtnGradient}
-              >
+            <TouchableOpacity style={styles.galleryBtn} onPress={pickFromGallery}
+              disabled={isUploading || isSaving || images.length >= 5}>
+              <LinearGradient colors={["#FFFFFF", "#F5F5F5"]} style={styles.galleryBtnGradient}>
                 <Ionicons name="images-outline" size={20} color={Colors.primary} />
-                <Text style={styles.galleryBtnText}>Gallery</Text>
+                <Text style={styles.galleryBtnText}>Add from Gallery</Text>
               </LinearGradient>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.cameraBtn}
-              onPress={takePhoto}
-              disabled={isUploading}
-            >
-              <LinearGradient
-                colors={["#FFFFFF", "#F5F5F5"]}
-                style={styles.cameraBtnGradient}
-              >
+            <TouchableOpacity style={styles.cameraBtn} onPress={takePhoto}
+              disabled={isUploading || isSaving || images.length >= 5}>
+              <LinearGradient colors={["#FFFFFF", "#F5F5F5"]} style={styles.cameraBtnGradient}>
                 <Ionicons name="camera-outline" size={20} color={Colors.primary} />
                 <Text style={styles.cameraBtnText}>Camera</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
-
           {isUploading && (
             <View style={styles.uploadingIndicator}>
               <ActivityIndicator size="small" color={Colors.primary} />
-              <Text style={styles.uploadingText}>Uploading image...</Text>
+              <Text style={styles.uploadingText}>Uploading and optimizing image...</Text>
             </View>
           )}
         </Animated.View>
@@ -962,6 +954,12 @@ const styles = StyleSheet.create({
   imageSection: {
     marginBottom: 8,
   },
+  galleryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 16 },
+  galleryImageItem: { width: "31%", aspectRatio: 1, position: "relative", borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: Colors.separator },
+  galleryImagePreview: { width: "100%", height: "100%" },
+  primaryImageBadge: { position: "absolute", left: 5, bottom: 5, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, backgroundColor: "rgba(0,0,0,0.72)" },
+  primaryImageBadgeText: { color: "#FFFFFF", fontSize: 9, fontWeight: "700" },
+  galleryRemoveButton: { position: "absolute", top: 3, right: 3, backgroundColor: "rgba(255,255,255,0.92)", borderRadius: 14 },
   imagePreviewContainer: {
     position: "relative",
     marginBottom: 16,
