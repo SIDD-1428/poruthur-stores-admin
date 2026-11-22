@@ -96,6 +96,7 @@ export default function EditProductScreen() {
   const [price, setPrice] = useState("");
   const [mrp, setMrp] = useState("");
   const [image, setImage] = useState("");
+  const [images, setImages] = useState<Array<{imageUrl:string;thumbnailUrl:string}>>([]);
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [protext, setProtext] = useState("");
   const [category, setCategory] = useState("");
@@ -139,8 +140,10 @@ export default function EditProductScreen() {
         setPrice(String(data.price ?? ""));
         setMrp(String(data.mrp ?? data.price ?? ""));
         setStock(String(data.stock || 0));
-        setImage(data.image || "");
-        setThumbnailUrl(data.thumbnailUrl || data.image || "");
+        const existingImages = Array.isArray(data.images) && data.images.length ? data.images.map((item: any) => typeof item === "string" ? { imageUrl: item, thumbnailUrl: item } : item) : data.image ? [{ imageUrl: data.image, thumbnailUrl: data.thumbnailUrl || data.image }] : [];
+        setImages(existingImages);
+        setImage(existingImages[0]?.imageUrl || data.image || "");
+        setThumbnailUrl(existingImages[0]?.thumbnailUrl || data.thumbnailUrl || data.image || "");
         setProtext(data.protext || "");
         setCategory(data.category || "");
         setRating(String(data.rating || ""));
@@ -211,8 +214,7 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
 
     const optimized = await optimizeImage({ storagePath: fileName });
 
-    setImage(optimized.data.imageUrl);
-    setThumbnailUrl(optimized.data.thumbnailUrl);
+    return { imageUrl: optimized.data.imageUrl, thumbnailUrl: optimized.data.thumbnailUrl };
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert("Success", "Image uploaded and optimized successfully");
@@ -237,16 +239,18 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
-      allowsEditing: true,
-      aspect: [4, 3],
+      allowsMultipleSelection: true,
+      selectionLimit: 5,
     });
 
     if (!result.canceled) {
-      await uploadImage(
-  result.assets[0].uri,
-  result.assets[0].mimeType
-);
-        }
+      const remaining = Math.max(0, 5 - images.length);
+      if (result.assets.length > remaining) Alert.alert("Image limit", "A product can have up to 5 images.");
+      for (const asset of result.assets.slice(0, remaining)) {
+        const uploaded = await uploadImage(asset.uri, asset.mimeType);
+        if (uploaded) setImages((current) => [...current, uploaded]);
+      }
+    }
   };
 
   const takePhoto = async () => {
@@ -263,10 +267,12 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
     });
 
     if (!result.canceled) {
-  await uploadImage(
-    result.assets[0].uri,
-    result.assets[0].mimeType
-  );
+  if (images.length >= 5) {
+    Alert.alert("Image limit", "A product can have up to 5 images.");
+    return;
+  }
+  const uploaded = await uploadImage(result.assets[0].uri, result.assets[0].mimeType);
+  if (uploaded) setImages((current) => [...current, uploaded]);
 }
   };
 
@@ -337,8 +343,9 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
         mrp: Number(mrp),
         price: Number(price),
         stock: Number(stock) || 0,
-        image,
-        thumbnailUrl: thumbnailUrl || image,
+        image: images[0]?.imageUrl || image,
+        images,
+        thumbnailUrl: images[0]?.thumbnailUrl || images[0]?.imageUrl || thumbnailUrl || image,
         protext: protext || "",
         category,
         rating: Number(rating) || 0,
@@ -403,24 +410,22 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
           <Text style={styles.sectionTitle}>Product Image</Text>
           <Text style={styles.sectionSubtitle}>Update product photo</Text>
 
-          {image ? (
-            <View style={styles.imagePreviewContainer}>
-              <Image source={{ uri: image }} style={styles.imagePreview} />
-              <TouchableOpacity
-                style={styles.removeImageBtn}
-                disabled={isUploading}
-                onPress={() => {
-                  setImage("");
-                  setThumbnailUrl("");
-                }}
-              >
-                <Ionicons name="close-circle" size={24} color={Colors.danger} />
-              </TouchableOpacity>
+          {images.length ? (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+              {images.map((item, index) => (
+                <View key={item.imageUrl} style={styles.imagePreviewContainer}>
+                  <Image source={{ uri: item.thumbnailUrl || item.imageUrl }} style={styles.imagePreview} />
+                  <Text style={{ color: Colors.textSecondary, fontSize: 11 }}>Photo {index + 1}{index === 0 ? " · Primary" : ""}</Text>
+                  <TouchableOpacity style={styles.removeImageBtn} disabled={isUploading} onPress={() => setImages((current) => current.filter((_, i) => i !== index))}>
+                    <Ionicons name="close-circle" size={24} color={Colors.danger} />
+                  </TouchableOpacity>
+                </View>
+              ))}
             </View>
           ) : (
             <View style={styles.imagePlaceholder}>
               <Ionicons name="image-outline" size={48} color={Colors.muted} />
-              <Text style={styles.imagePlaceholderText}>No image selected</Text>
+              <Text style={styles.imagePlaceholderText}>No images selected</Text>
             </View>
           )}
 
