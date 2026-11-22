@@ -97,7 +97,6 @@ export default function EditProductScreen() {
   const [mrp, setMrp] = useState("");
   const [image, setImage] = useState("");
   const [images, setImages] = useState<Array<{imageUrl:string;thumbnailUrl:string}>>([]);
-  const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [protext, setProtext] = useState("");
   const [category, setCategory] = useState("");
   const [rating, setRating] = useState("");
@@ -143,7 +142,6 @@ export default function EditProductScreen() {
         const existingImages = Array.isArray(data.images) && data.images.length ? data.images.map((item: any) => typeof item === "string" ? { imageUrl: item, thumbnailUrl: item } : item) : data.image ? [{ imageUrl: data.image, thumbnailUrl: data.thumbnailUrl || data.image }] : [];
         setImages(existingImages);
         setImage(existingImages[0]?.imageUrl || data.image || "");
-        setThumbnailUrl(existingImages[0]?.thumbnailUrl || data.thumbnailUrl || data.image || "");
         setProtext(data.protext || "");
         setCategory(data.category || "");
         setRating(String(data.rating || ""));
@@ -215,6 +213,7 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
     const optimized = await optimizeImage({ storagePath: fileName });
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setImage(optimized.data.imageUrl);
     return { imageUrl: optimized.data.imageUrl, thumbnailUrl: optimized.data.thumbnailUrl };
   } catch (error) {
     console.log("Image upload error:", error);
@@ -651,7 +650,6 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
             value={image}
             onChangeText={(value:string) => {
               setImage(value);
-              setThumbnailUrl("");
               setImages(value.trim() ? [{ imageUrl: value.trim(), thumbnailUrl: value.trim() }] : []);
             }}
           />
