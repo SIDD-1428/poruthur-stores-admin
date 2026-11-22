@@ -88,6 +88,7 @@ export default function AddProductScreen() {
   const [mrp, setMrp] = useState("");
   const [image, setImage] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [images, setImages] = useState<Array<{ image: string; thumbnailUrl: string }>>([]);
   const [imageUrlModalVisible, setImageUrlModalVisible] = useState(false);
   const [imageUrlCopied, setImageUrlCopied] = useState(false);
   const [protext, setProtext] = useState("");
@@ -191,8 +192,12 @@ const tokenResult = await callableUser.getIdTokenResult(true);
         throw new Error("Image optimization did not return both image URLs. Please retry.");
       }
 
-      setImage(optimized.data.imageUrl);
-      setThumbnailUrl(optimized.data.thumbnailUrl);
+      const uploadedImage = { image: optimized.data.imageUrl, thumbnailUrl: optimized.data.thumbnailUrl };
+      setImages((current) => {
+        const next = [...current, uploadedImage];
+        if (next.length === 1) { setImage(uploadedImage.image); setThumbnailUrl(uploadedImage.thumbnailUrl); }
+        return next;
+      });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", "Image uploaded and optimized successfully");
     } catch (error) {
@@ -217,15 +222,17 @@ const tokenResult = await callableUser.getIdTokenResult(true);
       return;
     }
 
+    const remaining = 5 - images.length;
+    if (remaining <= 0) { Alert.alert("Image limit reached", "A product can have up to 5 images."); return; }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
-      allowsEditing: true,
-      aspect: [4, 3],
+      allowsEditing: false,
+      allowsMultipleSelection: true,
+      selectionLimit: remaining,
     });
-
     if (!result.canceled) {
-      await uploadImage(result.assets[0].uri, result.assets[0].mimeType);
+      for (const asset of result.assets.slice(0, remaining)) await uploadImage(asset.uri, asset.mimeType);
     }
   };
 
@@ -269,7 +276,7 @@ const tokenResult = await callableUser.getIdTokenResult(true);
     const validBrand = productType !== "branded" ||
       (Boolean(brandId) && brands.some((brand: any) => brand.id === brandId));
 
-    if (!cleanName || !category.trim() || !image.trim() || !validNumbers || !validBrand) {
+    if (!cleanName || !category.trim() || (!images.length && !image.trim()) || !validNumbers || !validBrand) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         "Check Product Details",
@@ -284,8 +291,9 @@ const tokenResult = await callableUser.getIdTokenResult(true);
         name: cleanName,
         mrp: numericMrp,
         price: numericPrice,
-        image: image.trim(),
-        thumbnailUrl: thumbnailUrl.trim() || image.trim(),
+        image: images[0]?.image || image.trim(),
+        thumbnailUrl: images[0]?.thumbnailUrl || thumbnailUrl.trim() || image.trim(),
+        images: images.length ? images : [{ image: image.trim(), thumbnailUrl: thumbnailUrl.trim() || image.trim() }],
         protext: protext.trim(),
         category: category.trim(),
         rating: numericRating,
