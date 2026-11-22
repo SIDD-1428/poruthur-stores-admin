@@ -325,7 +325,7 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
       Alert.alert("Image Uploading", "Please wait until the image upload and optimization are complete");
       return;
     }
-    if (!name || !price || !mrp || !category || Number(mrp) < Number(price)) {
+    if (!name || !price || !mrp || images.length === 0 || !category || Number(mrp) < Number(price)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         "Missing Information",
@@ -341,9 +341,9 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
         mrp: Number(mrp),
         price: Number(price),
         stock: Number(stock) || 0,
-        image: images[0]?.imageUrl || image,
+        image: images[0]?.imageUrl || "",
         images,
-        thumbnailUrl: images[0]?.thumbnailUrl || images[0]?.imageUrl || thumbnailUrl || image,
+        thumbnailUrl: images[0]?.thumbnailUrl || images[0]?.imageUrl || "",
         protext: protext || "",
         category,
         rating: Number(rating) || 0,
@@ -652,6 +652,7 @@ const uploadImage = async (uri: string, mimeType?: string | null) => {
             onChangeText={(value:string) => {
               setImage(value);
               setThumbnailUrl("");
+              setImages(value.trim() ? [{ imageUrl: value.trim(), thumbnailUrl: value.trim() }] : []);
             }}
           />
         </Animated.View>
